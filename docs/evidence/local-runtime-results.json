@@ -1,0 +1,39 @@
+{
+  "checked_at": "2026-10-30T06:07:10.100911+00:00",
+  "scope": "Local Linux ARM64 Docker containers; PostgreSQL 16.15; Java 17",
+  "image_id": "sha256:d85e5e0576fd64cfe367474bdc459a1b88b73ab98c6fa42329f9c46ce52e78ef",
+  "container_controls": {
+    "uid": 10001,
+    "read_only_filesystem": true,
+    "all_linux_capabilities_dropped": true,
+    "no_new_privileges": true,
+    "api_loopback_only": true,
+    "database_host_port_published": false,
+    "database_password_in_api_environment": false
+  },
+  "database_checks": [
+    "1|t",
+    "currency_app|f|f|f",
+    "170"
+  ],
+  "restart": {
+    "cached_snapshot_preserved": true,
+    "observed_ready_after_seconds": 5.48,
+    "snapshot_fetched_at": "2026-10-30T06:06:43.272484Z"
+  },
+  "database_outage": {
+    "liveness_http": 200,
+    "liveness_body": {
+      "status": "UP"
+    },
+    "readiness_http": 503,
+    "readiness_body": {
+      "status": "DOWN"
+    }
+  },
+  "database_recovery": {
+    "readiness_http": 200,
+    "cached_snapshot_preserved": true,
+    "observed_ready_after_seconds": 1.08
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-10-30T06:07:45.389846+00:00",
+  "base_url": "http://127.0.0.1:8088",
+  "passed": 14,
+  "currencies_returned": 170,
+  "snapshot_fetched_at": "2026-10-30T06:06:43.272484Z",
+  "checks": [
+    "liveness returns UP without internal details",
+    "readiness returns UP without internal details",
+    "env is not exposed",
+    "metrics is not exposed",
+    "currency list includes CAD, USD, EUR and JPY",
+    "rates use the requested base",
+    "conversion matches the rate table",
+    "requests reuse the same cache snapshot",
+    "rate publication dates are preserved",
+    "zero amount is accepted",
+    "JPY conversion rounds to a whole unit",
+    "negative amount returns 400",
+    "unsupported currency returns 400",
+    "missing amount returns 400"
+  ]
+}
