@@ -35,6 +35,6 @@ After rebuilding the image, the live conversion and the complete smoke script pa
 - [HTTP smoke results](evidence/local-smoke-results.json)
 - [Container, database and recovery observations](evidence/local-runtime-results.json)
 - [Repeatable HTTP smoke script](../scripts/smoke-test.py)
-- [Automated test sources](../src/test/java/com/currency/exchange/)
+- [Automated build summary](evidence/local-build-summary.json)
 
 The automated suite uses synthetic provider responses and H2. The container checks add real PostgreSQL and live-provider coverage. These results describe the local environment; the Azure hosting milestone has its own deployment and verification work.

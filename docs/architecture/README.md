@@ -22,7 +22,7 @@ Clients reach managed HTTPS ingress, which terminates TLS and forwards requests 
 | Key Vault reference and managed identity. | Gives the API permission to read its database secret without embedding the password in its image. |
 | Azure Monitor and Log Analytics. | Collects container logs and platform metrics for troubleshooting and alerting. |
 
-The subnet layout uses `10.40.0.0/27` for the Container Apps environment and `10.40.0.32/28` for PostgreSQL, inside `10.40.0.0/24`. These are address allocations for this project, rather than a connection to the RestSim networks. The Key Vault connection uses HTTPS and identity-based access; it is separate from PostgreSQL's private network path.
+The subnet layout uses `10.40.0.0/27` for the Container Apps environment and `10.40.0.32/28` for PostgreSQL, inside `10.40.0.0/24`. The Key Vault connection uses HTTPS and identity-based access; it is separate from PostgreSQL's private network path.
 
 Scaling the API to zero does not stop PostgreSQL or VNet infrastructure charges. A custom VNet can add platform-managed load-balancer and public-IP charges. The first request after idle can take longer while the API starts. The deployment cost estimate will include these components before resources are provisioned.
 

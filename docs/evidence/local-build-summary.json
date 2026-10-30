@@ -1,0 +1,24 @@
+{
+  "scope": "Local Docker image build, Linux ARM64 with Java 17",
+  "date": "2026-10-30",
+  "command": "mvn -B -ntp verify",
+  "tests": 42,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "suites": [
+    {
+      "name": "CurrencyExchangeApiTests",
+      "tests": 9
+    },
+    {
+      "name": "RatesProviderClientTests",
+      "tests": 15
+    },
+    {
+      "name": "ExchangeRateServiceTests",
+      "tests": 18
+    }
+  ],
+  "result": "BUILD SUCCESS"
+}
