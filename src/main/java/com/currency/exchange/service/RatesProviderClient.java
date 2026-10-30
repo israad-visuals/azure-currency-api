@@ -38,12 +38,12 @@ public class RatesProviderClient {
             throw unavailable();
         }
         Map<String, RateQuote> rates = new HashMap<>();
-        rates.put("USD", new RateQuote(BigDecimal.ONE, null));
         for (ProviderRate row : response) {
             if (row == null || !"USD".equals(row.base()) || row.quote() == null ||
                     !row.quote().matches("[A-Z]{3}") || row.rate() == null || row.rate().signum() <= 0 ||
                     row.rate().scale() > 18 || (long) row.rate().precision() - row.rate().scale() > 20 ||
-                    row.date() == null) {
+                    row.date() == null ||
+                    ("USD".equals(row.quote()) && row.rate().compareTo(BigDecimal.ONE) != 0)) {
                 throw unavailable();
             }
             try {
@@ -55,6 +55,7 @@ public class RatesProviderClient {
                 throw unavailable();
             }
         }
+        rates.putIfAbsent("USD", new RateQuote(BigDecimal.ONE, null));
         return new ProviderRates(rates);
     }
 

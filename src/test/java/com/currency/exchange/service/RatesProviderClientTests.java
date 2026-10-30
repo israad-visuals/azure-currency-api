@@ -44,9 +44,25 @@ class RatesProviderClientTests {
         server.verify();
     }
 
+    @Test
+    void acceptsTheBaseCurrencyWhenReturnedByTheProvider() {
+        server.expect(requestTo("https://provider.example/v2/rates?base=USD"))
+                .andRespond(withSuccess("""
+                        [{"base":"USD","quote":"USD","date":"2026-10-30","rate":1.0},
+                         {"base":"USD","quote":"CAD","date":"2026-10-29","rate":1.25}]
+                        """, MediaType.APPLICATION_JSON));
+        var response = client.fetchRates();
+        assertEquals(0, BigDecimal.ONE.compareTo(response.rates().get("USD").getRate()));
+        assertEquals(LocalDate.parse("2026-10-30"), response.rates().get("USD").getRateDate());
+        assertEquals(2, response.rates().size());
+        server.verify();
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "[]", "{}", "not-json",
+            "[{\"base\":\"USD\",\"quote\":\"USD\",\"date\":\"2026-10-30\",\"rate\":2}]",
+            "[{\"base\":\"USD\",\"quote\":\"USD\",\"date\":\"2026-10-30\",\"rate\":1},{\"base\":\"USD\",\"quote\":\"USD\",\"date\":\"2026-10-30\",\"rate\":1}]",
             "[{\"base\":\"EUR\",\"quote\":\"CAD\",\"date\":\"2026-10-29\",\"rate\":1}]",
             "[{\"base\":\"USD\",\"quote\":\"CAD\",\"date\":\"2026-10-29\",\"rate\":0}]",
             "[{\"base\":\"USD\",\"quote\":\"CAD\",\"date\":\"2026-10-29\",\"rate\":-1}]",
