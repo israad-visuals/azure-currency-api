@@ -27,3 +27,17 @@ application-local.properties
 **/*.log
 
 .local/
+
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+.terraform.tfstate.lock.info
+*.tfvars
+*.tfvars.json
+*.tfplan
+*.tfplan.json
+*.plan
+tfplan
+plan.out
+crash.log
+crash.*.log
