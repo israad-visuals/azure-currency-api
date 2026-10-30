@@ -1,0 +1,58 @@
+name: currency-api-local
+
+services:
+  db:
+    image: postgres:16.15-alpine
+    environment:
+      POSTGRES_DB: currency_exchange
+      POSTGRES_USER: currency_admin
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_admin_password
+    secrets:
+      - db_admin_password
+      - db_app_password
+    volumes:
+      - database:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/10-app-user.sh:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "currency_admin", "-d", "currency_exchange"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+    cpus: 0.5
+
+  api:
+    build: .
+    image: currency-api:local
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${API_PORT:-8088}:8080"
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/currency_exchange?connectTimeout=3&socketTimeout=5
+      DB_USERNAME: currency_app
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT: 3000
+      SPRING_DATASOURCE_HIKARI_VALIDATION_TIMEOUT: 1000
+    secrets:
+      - source: db_app_password
+        target: spring.datasource.password
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    cpus: 1.0
+
+volumes:
+  database:
+
+secrets:
+  db_admin_password:
+    file: .local/secrets/db_admin_password
+  db_app_password:
+    file: .local/secrets/db_app_password

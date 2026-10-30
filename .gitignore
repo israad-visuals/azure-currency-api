@@ -25,3 +25,5 @@ secrets.properties
 application-local.properties
 *.key
 **/*.log
+
+.local/

@@ -1,0 +1,9 @@
+*
+!pom.xml
+!src/
+!src/**
+**/application-local.properties
+**/secrets.properties
+**/.env*
+**/*.key
+**/*.log
