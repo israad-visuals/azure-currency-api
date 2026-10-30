@@ -19,5 +19,9 @@ out/
 
 ### Secrets & Environment ###
 .env
+.env.*
+!.env.example
 secrets.properties
+application-local.properties
+*.key
 **/*.log

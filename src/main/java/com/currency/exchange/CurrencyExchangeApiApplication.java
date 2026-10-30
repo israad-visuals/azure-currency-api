@@ -1,13 +1,11 @@
-package com.somaliland.exchange;
+package com.currency.exchange;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class SomalilandExchangeApiApplication {
-
+public class CurrencyExchangeApiApplication {
     public static void main(String[] args) {
-        SpringApplication.run(SomalilandExchangeApiApplication.class, args);
+        SpringApplication.run(CurrencyExchangeApiApplication.class, args);
     }
-
 }

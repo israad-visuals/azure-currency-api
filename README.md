@@ -1,95 +1,57 @@
-# Somaliland Global Currency Exchange API  💸
- <pre>
-🟩🟩🟩🟩🟩
-⬜️⬜️⭐️⬜️⬜️
-🟥🟥🟥🟥🟥
-</pre>
+# Currency Exchange API
 
-![Java](https://img.shields.io/badge/Java-17-orange?style=flat-square)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-green?style=flat-square)
-![Database](https://img.shields.io/badge/PostgreSQL-16-blue?style=flat-square)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)
+A Java REST API that converts between supported currencies, such as CAD, USD, EUR and JPY. Exchange rates come from [Frankfurter](https://frankfurter.dev/) and are cached in PostgreSQL so requests can reuse the same rate table.
 
-A secure, open-source RESTful microservice that provides the first-ever algorithmic bridge between the **Somaliland Shilling (SLSH)** and global currencies.
-## 🚀 Live Demo & Documentation
-* **Developer Portal (Frontend):** [https://docs.dhawr.com](https://docs.dhawr.com)
-* **API Endpoint (Backend):** [https://api.dhawr.com/api/rates/all](https://api.dhawr.com/api/rates/all)
----
+## How it works
 
-## 🚀 The Problem
-Somaliland functions as a self-declared state with its own currency, the **Somaliland Shilling (SLSH)**. Because the region is not fully integrated into the global SWIFT banking system:
-* ❌ **No Public Data:** There are no digital exchange rates available for developers.
-* ❌ **Manual Chaos:** Local businesses and logistics companies must calculate rates manually, leading to billing errors.
-* ❌ **Integration Gap:** Apps cannot programmatically convert `SLSH` to `USD`, `EUR`, or `KES`.
+The provider returns a rate table based on USD. To convert between any two supported currencies, I divide the target currency's rate by the source currency's rate, then multiply by the amount. Calculations use `BigDecimal`; the result is rounded to the target currency's standard decimal places.
 
-## 💡 The Solution
-**Somaliland FX API** acts as a centralized "source of truth." It combines **local street rates** (managed securely by authorized admins) with **live global market data** to enable accurate, real-time conversion for any currency pair.
+The response includes the dates of the source and target rates, plus the time the application fetched the table. Different currencies can have different publication dates. USD is the reference value of 1, so its publication date is null. The cache lasts one hour by default. When it expires, the next request refreshes it. If the provider is unavailable at that point, the API returns `503` instead of silently presenting an expired table as current.
 
----
+## Endpoints
 
-## ⚙️ The "Triangulation" Algorithm
-Since there is no direct foreign exchange market for `SLSH -> EUR` or `SLSH -> KES`, the system uses **USD** as a pivot currency to bridge the gap mathematically.
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/convert?from=CAD&to=EUR&amount=100` | Convert an amount between two supported currencies. |
+| GET | `/api/rates?base=CAD` | Get the current cached rate table relative to a chosen base. |
+| GET | `/api/currencies` | List the currency codes supported by the provider's rate table. |
 
-**The Formula:**
-$$\text{Target Rate} = \left( \frac{\text{Input SLSH}}{\text{Local USD Rate}} \right) \times \text{Live Global Rate}$$
+Currency codes are case-insensitive. Amounts can be zero or positive, with up to 15 integer digits and 8 decimal places. Invalid inputs return `400`. The API calculates equivalent amounts; it does not transfer money.
 
-**Example (SLSH to KES):**
-1.  **Local Leg:** User has 8,500 SLSH. System knows `1 USD = 8,500 SLSH`.
-    * *Result: $1.00 USD*
-2.  **Global Leg:** System fetches live market data: `1 USD = 129.50 KES`.
-    * *Calculation: 1.00 * 129.50*
-3.  **Final Result:** 129.50 KES.
+## Technology
 
----
+Java 17, Spring Boot 4.1, Spring Data JPA, PostgreSQL and Maven. Tests use synthetic provider responses and an isolated H2 database.
 
-## 🛠 Tech Stack
-* **Core Framework:** Java 17, Spring Boot 3.x
-* **Database:** PostgreSQL (Relational Data Persistence)
-* **Security:** Custom `X-ADMIN-KEY` Header Authentication
-* **HTTP Client:** `RestTemplate` for external API integration
-* **Tooling:** Maven, Docker (planned), Git
+## Local setup
 
----
+Create a separate PostgreSQL database named `currency_exchange`, then set these environment variables in your terminal or IDE before starting the application:
 
-## 🔌 API Endpoints
+| Variable | Purpose |
+| --- | --- |
+| `DB_URL` | JDBC connection URL; defaults to `jdbc:postgresql://localhost:5432/currency_exchange`. |
+| `DB_USERNAME` | Database application username. |
+| `DB_PASSWORD` | Database application password. |
+| `RATE_CACHE_DURATION` | Optional ISO-8601 duration; defaults to `PT1H`. |
+| `PORT` | Optional HTTP port; defaults to `8080`. |
 
-### 1. Public Access (Read-Only)
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/rates/convert` | Converts SLSH to any global currency (e.g., USD, EUR). |
-| `GET` | `/api/rates/convert-to-slsh` | Converts any global currency back to SLSH. |
-| `GET` | `/api/rates/all` | Returns a history of all exchange rate updates. |
+Use a new database for this version. The cache uses `rate_snapshots` and `snapshot_rates`; it does not use or migrate the previous manually entered rate table. Automatic schema updates are enabled for local development and can be controlled with `DB_DDL_AUTO`.
 
-### 2. Admin Access (Protected 🔒)
-| Method | Endpoint | Description | Security Header |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/rates/update` | Updates the base `SLSH/USD` rate. | `X-ADMIN-KEY` |
+```sh
+./mvnw spring-boot:run
+```
 
-> **Note:** Protected endpoints require the `X-ADMIN-KEY` header. Requests without it will be rejected with `401 Unauthorized`.
+## Checks
 
----
+```sh
+./mvnw verify
+```
 
-## 📦 Installation & Setup
+Tests cover cross-currency calculations, rounding, validation, cache refresh, provider failures and HTTP endpoints. They do not call the live provider or require production credentials.
 
-### Prerequisites
-* Java 17 SDK
-* PostgreSQL installed and running
-* Maven
+## Configuration and security
 
-### Step 1: Clone the Repository
-```bash
-git clone [https://github.com/israad-visuals/somaliland-fx-api.git](https://github.com/israad-visuals/somaliland-fx-api.git)
-cd somaliland-fx-api
+Database credentials are read from environment variables. Frankfurter does not require an API key. Keep local credentials and `.env` files out of Git. A `.env` file is not automatically loaded by Spring Boot; configure the variables in your terminal or IDE.
 
-## 📂 Project Structure
-Here is a high-level overview of the backend architecture:
+The API has public read-only endpoints and no manual rate-update endpoint. Provider requests use HTTPS with connection and read timeouts. Cross-origin access is limited to GET requests. Hosting-level request limits and TLS belong in the deployment configuration.
 
-src/main/java/com/somaliland/exchange
-├── controller
-│   └── ExchangeRateController.java  # REST Endpoints (The "Door")
-├── service
-│   └── ExchangeRateService.java     # Business Logic & Triangulation Math (The "Brain")
-├── repository
-│   └── ExchangeRateRepository.java  # Database Access (The "Memory")
-└── model
-    └── ExchangeRate.java            # Database Entity (The Data Shape)
+Rates are reference data published by central banks and official sources through Frankfurter. They are not executable trading quotes. The available currencies are listed by `/api/currencies`; coverage is determined by the upstream feed.
