@@ -34,7 +34,7 @@ Create a separate PostgreSQL database named `currency_exchange`, then set these 
 | `RATE_CACHE_DURATION` | Optional ISO-8601 duration; defaults to `PT1H`. |
 | `PORT` | Optional HTTP port; defaults to `8080`. |
 
-Use a new database for this version. The cache uses `rate_snapshots` and `snapshot_rates`; it does not use or migrate the previous manually entered rate table. Automatic schema updates are enabled for local development and can be controlled with `DB_DDL_AUTO`.
+Use a new database for this version. The cache uses `rate_snapshots` and `snapshot_rates`; it does not use or migrate the previous manually entered rate table. Flyway applies the versioned SQL migration on startup. Hibernate validates that the database matches the application instead of changing tables automatically.
 
 ```sh
 ./mvnw spring-boot:run
