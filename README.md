@@ -55,6 +55,7 @@ The Docker build also passed all 42 automated tests, covering calculations, roun
 | Page | Contents |
 | --- | --- |
 | [Architecture](docs/architecture.md) | Request flow, component choices, access controls and failure behaviour. |
+| [Azure hosting design](docs/architecture/README.md) | Container Apps architecture, network layout and build/deployment diagrams. |
 | [Local setup](docs/local-development.md) | Start, verify, troubleshoot and stop the environment. |
 | [Verification](docs/verification.md) | Recorded checks, observations and the provider integration fix. |
 
