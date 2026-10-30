@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -23,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class CurrencyExchangeApiTests {
     @Autowired
     private WebApplicationContext context;
@@ -105,4 +107,21 @@ class CurrencyExchangeApiTests {
                         .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isForbidden());
     }
+    @Test
+    void exposesOnlyStatusForLivenessAndDatabaseReadiness() throws Exception {
+        mvc.perform(get("/actuator/health/liveness"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.components").doesNotExist());
+        mvc.perform(get("/actuator/health/readiness"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.components").doesNotExist());
+        verifyNoInteractions(provider);
+    }
+
+    @Test
+    void keepsManagementConfigurationAndMetricsPrivate() throws Exception {
+        mvc.perform(get("/actuator/env")).andExpect(status().isNotFound());
+        mvc.perform(get("/actuator/metrics")).andExpect(status().isNotFound());
+    }
+
 }
