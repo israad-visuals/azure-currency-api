@@ -1,57 +1,61 @@
 # Currency Exchange API
 
-A Java REST API that converts between supported currencies, such as CAD, USD, EUR and JPY. Exchange rates come from [Frankfurter](https://frankfurter.dev/) and are cached in PostgreSQL so requests can reuse the same rate table.
+A Java API for converting between supported currencies, with PostgreSQL rate caching and a container setup prepared for Azure hosting.
 
-## How it works
-
-The provider returns a rate table based on USD. To convert between any two supported currencies, I divide the target currency's rate by the source currency's rate, then multiply by the amount. Calculations use `BigDecimal`; the result is rounded to the target currency's standard decimal places.
-
-The response includes the dates of the source and target rates, plus the time the application fetched the table. Different currencies can have different publication dates. USD is the reference value of 1, so its publication date is null. The cache lasts one hour by default. When it expires, the next request refreshes it. If the provider is unavailable at that point, the API returns `503` instead of silently presenting an expired table as current.
-
-## Endpoints
-
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| GET | `/api/convert?from=CAD&to=EUR&amount=100` | Convert an amount between two supported currencies. |
-| GET | `/api/rates?base=CAD` | Get the current cached rate table relative to a chosen base. |
-| GET | `/api/currencies` | List the currency codes supported by the provider's rate table. |
-
-Currency codes are case-insensitive. Amounts can be zero or positive, with up to 15 integer digits and 8 decimal places. Invalid inputs return `400`. The API calculates equivalent amounts; it does not transfer money.
-
-## Technology
-
-Java 17, Spring Boot 4.1, Spring Data JPA, PostgreSQL and Maven. Tests use synthetic provider responses and an isolated H2 database.
-
-## Local setup
-
-Create a separate PostgreSQL database named `currency_exchange`, then set these environment variables in your terminal or IDE before starting the application:
-
-| Variable | Purpose |
+| Project at a glance | |
 | --- | --- |
-| `DB_URL` | JDBC connection URL; defaults to `jdbc:postgresql://localhost:5432/currency_exchange`. |
-| `DB_USERNAME` | Database application username. |
-| `DB_PASSWORD` | Database application password. |
-| `RATE_CACHE_DURATION` | Optional ISO-8601 duration; defaults to `PT1H`. |
-| `PORT` | Optional HTTP port; defaults to `8080`. |
+| Application | Currency conversion, rate tables and supported currency lookup. |
+| Local environment | Java 17 API and PostgreSQL 16 containers. |
+| Validation | 42 automated tests and 14 HTTP smoke checks passed. |
+| Operations | Database migration, health probes, restart and outage recovery checks. |
 
-Use a new database for this version. The cache uses `rate_snapshots` and `snapshot_rates`; it does not use or migrate the previous manually entered rate table. Flyway applies the versioned SQL migration on startup. Hibernate validates that the database matches the application instead of changing tables automatically.
+[My contribution](#my-contribution) · [Architecture](#architecture) · [Results](#results) · [Documentation](#documentation)
 
-```sh
-./mvnw spring-boot:run
-```
+## Project goal
 
-## Checks
+I expanded an earlier exchange-rate API to support conversion between different currency pairs. I also wanted a repeatable environment where I could check database setup, credential handling and application recovery before moving the workload to Azure.
 
-```sh
-./mvnw verify
-```
+## My contribution
 
-Tests cover cross-currency calculations, rounding, validation, cache refresh, provider failures and HTTP endpoints. They do not call the live provider or require production credentials.
+- Reworked the conversion flow to use a shared rate table, decimal calculations and currency-specific rounding.
+- Added a PostgreSQL cache and versioned SQL migration so the database setup is part of the project.
+- Packaged the API and database with Docker Compose, using a non-root application container and separate database credentials.
+- Added health probes and checked how the application behaves during a restart and a database outage.
 
-## Configuration and security
+## Architecture
 
-Database credentials are read from environment variables. Frankfurter does not require an API key. Keep local credentials and `.env` files out of Git. A `.env` file is not automatically loaded by Spring Boot; configure the variables in your terminal or IDE.
+**Client → Currency API → PostgreSQL cache**
 
-The API has public read-only endpoints and no manual rate-update endpoint. Provider requests use HTTPS with connection and read timeouts. Cross-origin access is limited to GET requests. Hosting-level request limits and TLS belong in the deployment configuration.
+When the cache needs refreshing, the API retrieves rates from [Frankfurter](https://frankfurter.dev/) over HTTPS. Requests then reuse that snapshot for one hour. Each conversion returns the source and target rate dates, plus the snapshot fetch time.
 
-Rates are reference data published by central banks and official sources through Frankfurter. They are not executable trading quotes. The available currencies are listed by `/api/currencies`; coverage is determined by the upstream feed.
+The API is available only on the local loopback address in the Compose setup. PostgreSQL has no published host port. Passwords are generated locally and mounted as secret files; they are excluded from Git and the Docker build.
+
+[Read the architecture and design decisions](docs/architecture.md)
+
+## API endpoints
+
+| Request | Purpose |
+| --- | --- |
+| `GET /api/convert?from=CAD&to=EUR&amount=100` | Convert an amount. |
+| `GET /api/rates?base=CAD` | Return the cached rate table for a chosen base. |
+| `GET /api/currencies` | List supported currency codes. |
+
+Coverage follows the provider's rate feed. Amounts must be non-negative, with up to 15 integer digits and 8 decimal places. The API calculates reference amounts; it does not transfer money.
+
+## Results
+
+The local container run passed all 14 HTTP smoke checks against PostgreSQL and the live rate feed. The cached snapshot survived an API restart. Stopping PostgreSQL changed readiness to `503` while liveness stayed `200`; readiness returned to `200` after the database restarted.
+
+The Docker build also passed all 42 automated tests, covering calculations, rounding, input validation, provider responses, caching and HTTP behaviour. Live integration exposed a valid USD reference row that the parser rejected; I corrected the handling and added regression coverage.
+
+[View the verification results and evidence](docs/verification.md)
+
+## Documentation
+
+| Page | Contents |
+| --- | --- |
+| [Architecture](docs/architecture.md) | Request flow, component choices, access controls and failure behaviour. |
+| [Local setup](docs/local-development.md) | Start, verify, troubleshoot and stop the environment. |
+| [Verification](docs/verification.md) | Recorded checks, observations and the provider integration fix. |
+
+The next engineering milestone is the Azure hosting configuration: a small container deployment, database connectivity and scoped identity access, with a cost and cleanup plan before provisioning.
