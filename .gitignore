@@ -41,3 +41,5 @@ tfplan
 plan.out
 crash.log
 crash.*.log
+
+web/dist/

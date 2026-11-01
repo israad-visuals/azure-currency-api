@@ -1,0 +1,23 @@
+import { readFile, writeFile, mkdir, cp, rm } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const root = dirname(fileURLToPath(import.meta.url));
+const output = join(root, 'dist');
+await rm(output, { recursive: true, force: true });
+await mkdir(output, { recursive: true });
+await cp(join(root, 'public'), output, { recursive: true });
+const runtime = await readFile(join(root, 'vendor/runtime.js'), 'utf8');
+const application = await readFile(join(root, 'app.js'), 'utf8');
+const bundle = runtime + '\n' + application;
+const digest = text => createHash('sha256').update(text).digest('hex').slice(0, 12);
+const jsName = `app-${digest(bundle)}.js`;
+const css = await readFile(join(output, 'assets/site.css'));
+const cssName = `site-${digest(css)}.css`;
+await writeFile(join(output, 'assets', jsName), bundle);
+await writeFile(join(output, 'assets', cssName), css);
+await rm(join(output, 'assets/site.css'));
+const html = await readFile(join(output, 'index.html'), 'utf8');
+await writeFile(join(output, 'index.html'), html.replace('/assets/app.js', `/assets/${jsName}`).replace('/assets/site.css', `/assets/${cssName}`));
+console.log(`Built ${jsName} and ${cssName}`);
