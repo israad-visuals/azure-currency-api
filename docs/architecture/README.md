@@ -4,6 +4,8 @@
 
 I chose Azure Container Apps Consumption to run the existing Docker application with managed ingress and scale-to-zero. This page describes the Azure hosting design; the recorded execution results are in the [local verification report](../verification.md).
 
+The diagram and subnet discussion below describe the original private-network portal lab. For the current lower-cost portfolio deployment, see the [Terraform guide](../../terraform/README.md): default Container Apps networking, a PostgreSQL public endpoint restricted by outbound IP firewall rules, TLS, Key Vault and zero-to-one API replicas. The private-network diagram is not the topology of that Terraform demo.
+
 ## Cloud architecture
 
 [![Currency API Azure cloud architecture](01-cloud-architecture.png)](01-cloud-architecture.png)
