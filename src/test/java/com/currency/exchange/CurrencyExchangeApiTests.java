@@ -1,6 +1,11 @@
 package com.currency.exchange;
 
 import com.currency.exchange.exception.ApiException;
+import com.currency.exchange.model.CustomCurrency;
+import com.currency.exchange.repository.CustomCurrencyRepository;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import com.currency.exchange.repository.RateSnapshotRepository;
 import com.currency.exchange.service.RatesProviderClient;
 import java.math.BigDecimal;
@@ -13,12 +18,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -30,6 +38,12 @@ class CurrencyExchangeApiTests {
     private WebApplicationContext context;
     @Autowired
     private RateSnapshotRepository repository;
+    @Autowired
+    private CustomCurrencyRepository customs;
+    @Autowired
+    private JdbcTemplate jdbc;
+    @MockitoBean
+    private Clock clock;
     @MockitoBean
     private RatesProviderClient provider;
     private MockMvc mvc;
@@ -37,6 +51,9 @@ class CurrencyExchangeApiTests {
     @BeforeEach
     void setUp() {
         repository.deleteAll();
+        customs.deleteAll();
+        when(clock.instant()).thenReturn(Instant.parse("2026-11-01T12:00:00Z"));
+        when(clock.getZone()).thenReturn(ZoneOffset.UTC);
         mvc = MockMvcBuilders.webAppContextSetup(context).build();
         when(provider.fetchRates()).thenReturn(new RatesProviderClient.ProviderRates(
                 Map.of("USD", new RateQuote(BigDecimal.ONE, null),
@@ -91,7 +108,7 @@ class CurrencyExchangeApiTests {
     }
 
     @Test
-    void removesManualRateChangesAndLegacyEndpoints() throws Exception {
+    void keepsRateAdministrationOffThePublicApi() throws Exception {
         mvc.perform(post("/api/rates/update").param("currencyCode", "USD").param("rate", "100"))
                 .andExpect(status().isNotFound());
         mvc.perform(get("/api/rates/all"))
@@ -122,6 +139,65 @@ class CurrencyExchangeApiTests {
     void keepsManagementConfigurationAndMetricsPrivate() throws Exception {
         mvc.perform(get("/actuator/env")).andExpect(status().isNotFound());
         mvc.perform(get("/actuator/metrics")).andExpect(status().isNotFound());
+    }
+
+    private void addCredits() {
+        customs.save(new CustomCurrency("GAME_CREDITS", "Fictional game credits", new BigDecimal("500"),
+                (short) 0, LocalDate.parse("2026-11-01"), LocalDate.parse("2026-11-30"), clock.instant()));
+    }
+
+    @Test
+    void bridgesPersistedCustomCurrencyIntoProviderRatesOverHttp() throws Exception {
+        addCredits();
+        mvc.perform(get("/api/convert").param("from", "GAME_CREDITS").param("to", "EUR").param("amount", "1000"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.convertedAmount").value(1.8))
+                .andExpect(jsonPath("$.bridgeCurrency").value("USD")).andExpect(jsonPath("$.usdAmount").value(2))
+                .andExpect(jsonPath("$.fromQuote.source").value("MANUAL"))
+                .andExpect(jsonPath("$.toQuote.source").value("FRANKFURTER"))
+                .andExpect(jsonPath("$.fromQuote.validUntil").value("2026-11-30"));
+        mvc.perform(get("/api/custom-currencies"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].unitsPerUsd").value(500))
+                .andExpect(jsonPath("$[0].active").value(true));
+        verify(provider, times(1)).fetchRates();
+    }
+
+    @Test
+    void operatorUpdatesAreVisibleWithoutRefreshingMarketRates() throws Exception {
+        addCredits();
+        mvc.perform(get("/api/convert").param("from", "GAME_CREDITS").param("to", "EUR").param("amount", "1000"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.convertedAmount").value(1.8));
+        jdbc.update("UPDATE custom_currencies SET units_per_usd = 1000, updated_at = CURRENT_TIMESTAMP WHERE code = 'GAME_CREDITS'");
+        mvc.perform(get("/api/convert").param("from", "GAME_CREDITS").param("to", "EUR").param("amount", "1000"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.convertedAmount").value(0.9));
+        verify(provider, times(1)).fetchRates();
+    }
+
+    @Test
+    void expiredManualRatesFailAndTheCatalogShowsTheirStatus() throws Exception {
+        addCredits();
+        jdbc.update("UPDATE custom_currencies SET rate_date = DATE '2026-10-01', valid_until = DATE '2026-10-31'");
+        mvc.perform(get("/api/convert").param("from", "GAME_CREDITS").param("to", "USD").param("amount", "1000"))
+                .andExpect(status().isServiceUnavailable());
+        mvc.perform(get("/api/custom-currencies"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].active").value(false));
+        verifyNoInteractions(provider);
+    }
+
+    @Test
+    void schemaRejectsInvalidManualRatesAndReservedMarketCodes() {
+        String insert = "INSERT INTO custom_currencies (code, name, units_per_usd, decimal_places, rate_date, valid_until) VALUES (?, 'Test units', ?, ?, DATE '2026-11-01', DATE '2026-11-30')";
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(insert, "USD", 500, 2));
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(insert, "BAD_UNITS", 0, 2));
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(insert, "BAD_UNITS", -1, 2));
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(insert, "BAD_UNITS", 500, 9));
+        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update(insert, "bad_units", 500, 2));
+    }
+
+    @Test
+    void rejectsPublicCustomCurrencyWrites() throws Exception {
+        mvc.perform(post("/api/custom-currencies")).andExpect(status().isMethodNotAllowed());
+        mvc.perform(put("/api/custom-currencies/GAME_CREDITS")).andExpect(status().isNotFound());
+        mvc.perform(delete("/api/custom-currencies/GAME_CREDITS")).andExpect(status().isNotFound());
     }
 
 }
