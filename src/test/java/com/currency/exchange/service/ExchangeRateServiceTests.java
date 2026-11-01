@@ -5,6 +5,7 @@ import com.currency.exchange.model.RateSnapshot;
 import com.currency.exchange.model.RateQuote;
 import java.time.LocalDate;
 import com.currency.exchange.repository.RateSnapshotRepository;
+import com.currency.exchange.repository.CustomCurrencyRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
@@ -24,14 +25,16 @@ import static org.mockito.Mockito.*;
 class ExchangeRateServiceTests {
     private final Instant now = Instant.parse("2026-10-30T12:00:00Z");
     private RateSnapshotRepository repository;
+    private CustomCurrencyRepository customCurrencies;
     private RatesProviderClient provider;
     private ExchangeRateService service;
 
     @BeforeEach
     void setUp() {
         repository = mock(RateSnapshotRepository.class);
+        customCurrencies = mock(CustomCurrencyRepository.class);
         provider = mock(RatesProviderClient.class);
-        service = new ExchangeRateService(repository, provider,
+        service = new ExchangeRateService(repository, customCurrencies, provider,
                 Clock.fixed(now, ZoneOffset.UTC), Duration.ofHours(1));
     }
 
@@ -97,7 +100,7 @@ class ExchangeRateServiceTests {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "CA", "CADDD", "12!"})
+    @ValueSource(strings = {"", "CA", "CODE_TOO_LONG_12345", "12!", "US$", "12A"})
     void rejectsMalformedCurrencyCodes(String code) {
         assertThrows(ApiException.class, () -> service.convert(BigDecimal.ONE, code, "CAD"));
         verifyNoInteractions(provider, repository);

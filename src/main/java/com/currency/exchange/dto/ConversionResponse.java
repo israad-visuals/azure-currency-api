@@ -6,5 +6,7 @@ import java.time.LocalDate;
 
 public record ConversionResponse(String from, String to, BigDecimal amount,
                                  BigDecimal exchangeRate, BigDecimal convertedAmount,
-                                 LocalDate fromRateDate, LocalDate toRateDate, Instant fetchedAt) {
+                                 LocalDate fromRateDate, LocalDate toRateDate, Instant fetchedAt,
+                                 String bridgeCurrency, BigDecimal usdAmount,
+                                 RateDetails fromQuote, RateDetails toQuote) {
 }

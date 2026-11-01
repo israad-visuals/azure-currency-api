@@ -1,6 +1,7 @@
 package com.currency.exchange.controller;
 
 import com.currency.exchange.dto.ConversionResponse;
+import com.currency.exchange.dto.CustomCurrencyResponse;
 import com.currency.exchange.dto.RatesResponse;
 import com.currency.exchange.service.ExchangeRateService;
 import java.math.BigDecimal;
@@ -33,5 +34,10 @@ public class ExchangeRateController {
     @GetMapping("/currencies")
     public List<String> currencies() {
         return service.getCurrencies();
+    }
+
+    @GetMapping("/custom-currencies")
+    public List<CustomCurrencyResponse> customCurrencies() {
+        return service.getCustomCurrencies();
     }
 }
