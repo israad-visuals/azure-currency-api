@@ -27,7 +27,7 @@ curl http://127.0.0.1:8088/actuator/health/readiness
 
 ## Configure a fictional custom currency
 
-After the API has started and applied both migrations, follow the [custom currency guide](custom-currencies.md). Custom rates are optional: a fresh database has none, and ordinary market conversions still work.
+After the API has started and applied all migrations, follow the [custom currency guide](custom-currencies.md). Custom rates are optional: a fresh database has none, and ordinary market conversions still work.
 
 ## Credentials and storage
 
@@ -89,7 +89,7 @@ Use Java 17 or later and a separate PostgreSQL database named `currency_exchange
 | `DB_POOL_SIZE` | Maximum database connections; defaults to `5`. |
 | `PORT` | Application port; defaults to `8080`. |
 
-The application role needs permission to create tables in its own schema so Flyway can apply migrations. V2 adds custom currencies to an existing V1 database without replacing the provider cache. Keep applied migration files unchanged; use the operator SQL guide to maintain valuations. Spring Boot does not automatically load `.env` files.
+The application role needs permission to create tables in its own schema so Flyway can apply migrations. V2 adds custom currencies to an existing V1 database without replacing the provider cache. V3 identifies public submissions while preserving existing operator valuations. Keep applied migration files unchanged; use the operator SQL guide to maintain valuations. Spring Boot does not automatically load `.env` files.
 
 ```sh
 ./mvnw verify

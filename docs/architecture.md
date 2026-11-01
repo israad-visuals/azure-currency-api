@@ -2,7 +2,7 @@
 
 [Project overview](../README.md) · [Local setup](local-development.md) · [Verification results](verification.md)
 
-I separated the API, database and rate provider so each part has a clear responsibility. The API handles validation and USD-bridge calculations. PostgreSQL stores operator-managed valuations separately from the provider cache, and Frankfurter supplies market reference rates.
+I separated the API, database and rate provider so each part has a clear responsibility. The API handles validation and USD-bridge calculations. PostgreSQL stores operator-managed and visitor-submitted valuations separately from the provider cache, and Frankfurter supplies market reference rates.
 
 ## Request flow
 
@@ -12,7 +12,7 @@ I separated the API, database and rate provider so each part has a clear respons
 4. Both sources use the same direction: **units per US$1**. The calculation is `amount / source_units_per_usd * target_units_per_usd`.
 5. The API rounds only the final amount, using market currency minor units or the custom currency's configured decimal places. The response includes the USD amount and both rate sources, dates, recorded timestamps and manual expiry dates.
 
-Configured valuations are supplied by the operator; their accuracy is not verified against an external market. Provider coverage determines which market targets are available. The API calculates reference amounts and does not move money or execute trades.
+Configured valuations are supplied by operators or visitors; their accuracy is not verified against an external market. Provider coverage determines which market targets are available. The API calculates reference amounts and does not move money or execute trades.
 
 See the [custom currency guide](custom-currencies.md) for SQL and fictional examples.
 
@@ -24,7 +24,7 @@ See the [custom currency guide](custom-currencies.md) for SQL and fictional exam
 | Convert between different currency pairs. | USD as a shared bridge. | Avoids keeping a separate conversion rule for each pair. |
 | Keep decimal calculations consistent. | `BigDecimal` and currency-specific rounding. | Avoids binary floating-point errors and handles currencies such as JPY correctly. |
 | Avoid a provider request for every conversion. | One-hour PostgreSQL cache. | Reuses the same snapshot across requests and application restarts. |
-| Keep database setup repeatable. | Flyway migrations and Hibernate schema validation. | V1 creates the provider cache; V2 adds custom valuations without changing the old migration. |
+| Keep database setup repeatable. | Flyway migrations and Hibernate schema validation. | V1 creates the provider cache; V2 adds custom valuations; V3 identifies visitor submissions. |
 | Run the same application package in different environments. | Multi-stage Docker build with Java 17. | Runs the tests during the build and puts only the application and runtime in the final image. |
 | Limit the application's access. | Non-root container and a separate database application role. | The API cannot create database users or databases, and its container filesystem is read-only. |
 | Keep credentials out of source code and images. | Local secret files mounted through Compose. | Generates separate application and administrator passwords without putting their values in the Compose file or application environment. |
@@ -43,7 +43,7 @@ Compose secrets are local files, not an encrypted vault. The setup script keeps 
 
 `custom_currencies` stores the code, display name, `units_per_usd`, target decimal places, `rate_date`, `valid_until` and `updated_at`. Database constraints reject nonpositive rates, invalid precision, malformed custom codes and expiry before the rate date. The separate namespace prevents a manual value from replacing a provider's three-letter currency code.
 
-An operator updates rows in an authenticated SQL session. Each conversion reads the relevant manual rows again, so an update takes effect without waiting for the provider cache to expire. There is no public HTTP administration route. Expired or future-dated manual rates return `503`; they remain visible as inactive in the custom catalog. The active currency list omits them. Unknown codes return `400`.
+An operator updates rows in an authenticated SQL session. Each conversion reads the relevant manual rows again, so an update takes effect without waiting for the provider cache to expire. The public create-only endpoint accepts new codes. It never merges submitted values into existing rows: JPA persist plus the database primary key prevents duplicate-code overwrites, including concurrent requests. V3 defaults existing rows to operator data; visitor submissions are marked USER_ENTERED and expire after 30 days. Public updates and deletes are unavailable. Expired or future-dated manual rates return `503`; they remain visible as inactive in the custom catalog. The active currency list omits them. Unknown codes return `400`.
 
 ## Cache and failure behaviour
 

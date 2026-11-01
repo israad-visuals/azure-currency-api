@@ -1,6 +1,6 @@
 ![Custom Currency Bridge API: manually configured currencies, USD conversion and market reference rates.](docs/assets/project-header.svg)
 
-A Java REST API that converts locally managed and application-specific currencies into supported market currencies through USD. Operators maintain a custom currency’s USD valuation in PostgreSQL; the API combines it with Frankfurter reference rates and shows where both rates came from.
+A Java REST API that converts locally managed and application-specific currencies into supported market currencies through USD. Visitors can add new custom valuations through the public form, and operators maintain existing rates in PostgreSQL; the API combines it with Frankfurter reference rates and shows where both rates came from.
 
 **Explore:** [Project context](#project-context) · [Implementation](#implementation) · [Cloud architecture](#cloud-architecture) · [Build and deployment](#build-and-deployment) · [Results](#local-verification) · [Documentation](#documentation)
 
@@ -12,7 +12,7 @@ The current demo runs on the existing VPS behind aaPanel-managed Apache. This is
 
 The demo configures **500 fictional GAME_CREDITS per USD**, valid through **December 1, 2026**. This is an illustrative operator valuation, not a market quote. It must be updated manually before expiry. Provider-supported market rates come from Frankfurter and use a one-hour cache.
 
-The existing page's layout, animations and stylesheet were preserved while updating its content and API calls. Its recovered rendering code and build instructions are in [web/](web/README.md). The former browser editor now links to the SQL operator guide because the new API has no public write endpoint.
+The existing page's layout, animations and stylesheet were preserved while updating its content and API calls. Its recovered rendering code and build instructions are in [web/](web/README.md). The former browser editor now links to the SQL operator guide for changes to existing codes. Visitors can add new codes using the public form.
 
 [Read the scoped VPS release and verification record](docs/vps-deployment.md)
 
@@ -29,7 +29,7 @@ US$2 × 0.90 EUR per USD                 = €1.80
 
 Both example rates are illustrative. The API supports custom-to-market, market-to-custom, custom-to-custom and ordinary market pairs. A currency must be configured locally or available from the provider; the service does not invent missing prices.
 
-Custom rates include a publication date, validity end date and update timestamp. Responses identify `MANUAL`, `FRANKFURTER` or `USD_REFERENCE` sources and expose the intermediate USD amount. A manually entered valuation is not presented as an independently verified market price. These are reference conversions, not money transfers.
+Custom rates include a publication date, validity end date and update timestamp. Responses identify `MANUAL`, `USER_ENTERED`, `FRANKFURTER` or `USD_REFERENCE` sources and expose the intermediate USD amount. A manually entered valuation is not presented as an independently verified market price. These are reference conversions, not money transfers.
 
 For Azure hosting, I chose Container Apps Consumption to reuse the Docker image and scale API compute to zero between visits. The current Terraform demo uses a PostgreSQL public endpoint restricted by outbound IP firewall rules, TLS and scoped access to its database secret. This keeps the ongoing cost lower than the private-network portal lab.
 
@@ -75,7 +75,7 @@ The delivery diagram shows the planned GitHub Actions and OIDC workflow: verify 
 
 | Check | Recorded result |
 | --- | --- |
-| Current automated verification | **63 tests passed**, including manual valuations, USD bridging, expiry, database updates and schema constraints. |
+| Current automated verification | **71 tests passed**, including manual valuations, USD bridging, expiry, database updates and schema constraints. |
 | Current custom-currency runtime checks | **10 checks passed** against isolated PostgreSQL 16.15 and the live provider on November 1. |
 | Original market-only runtime checks | **14 HTTP smoke checks passed** on October 30, repeated after database recovery. |
 | API restart | The cached rates and fetch timestamp were preserved. |
@@ -95,8 +95,9 @@ For a configured currency: `GET /api/convert?from=GAME_CREDITS&to=EUR&amount=100
 | `GET /api/rates?base=CAD` | Return the cached rate table for a chosen base. |
 | `GET /api/currencies` | List provider-supported codes and currently valid configured codes. |
 | `GET /api/custom-currencies` | Show configured valuations, timestamps, expiry and active status. |
+| `POST /api/custom-currencies` | Add a new public currency with `code`, `name` and `unitsPerUsd`. |
 
-Responses include both rate sources, publication dates, the USD bridge amount and the provider snapshot fetch time when used. Calculations use `BigDecimal` and round the final result to the target currency's configured decimal places. Custom rates are maintained through an authenticated database session; there is no public write endpoint.
+Responses include both rate sources, publication dates, the USD bridge amount and the provider snapshot fetch time when used. Calculations use `BigDecimal` and round the final result to the target currency's configured decimal places. Anyone can create a new custom code using `POST /api/custom-currencies` or the public form. Entries are marked `USER_ENTERED`, use two decimal places and expire after 30 days. Existing codes cannot be overwritten, edited or deleted through the public API; operators maintain them through authenticated SQL. The demo allows ten successful submissions per minute per API process and at most 500 stored custom codes.
 
 ## Documentation
 

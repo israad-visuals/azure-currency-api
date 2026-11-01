@@ -2,15 +2,32 @@
 
 [Project overview](../README.md) · [Application design](architecture.md) · [Local setup](local-development.md)
 
-The API combines two kinds of rates:
+The API distinguishes who supplied each valuation:
 
 | Source | Who maintains it | Meaning |
 | --- | --- | --- |
+| `USER_ENTERED` | A visitor submits a new currency through the form or API. | Unverified units per USD, valid for 30 days. |
 | `MANUAL` | An operator updates PostgreSQL. | Configured custom units per US$1. |
 | `FRANKFURTER` | The external provider supplies reference rates. | Market currency units per US$1. |
 | `USD_REFERENCE` | The calculation uses USD itself. | Always 1 USD per USD. |
 
 Use this for game credits, community units or other locally managed currencies whose valuation must be configured. A configured price is the operator's input, not a market price verified by the API. Ordinary market-to-market conversion remains supported.
+
+## Add a currency in the browser
+
+Open https://docs.dhawr.com/#add-currency and enter a new currency code, display name and the number of units equal to US$1. The application stores it in PostgreSQL and refreshes the live card. It can immediately be used as a source or target in `/api/convert`.
+
+The same operation is available as JSON:
+
+```sh
+curl --fail-with-body -X POST 'https://api.dhawr.com/api/custom-currencies' \
+  -H 'Content-Type: application/json' \
+  -d '{"code":"MY_CREDITS","name":"My game credits","unitsPerUsd":500}'
+```
+
+A successful request returns `201`. The server assigns the current UTC date, a 30-day expiry, two target decimal places and `USER_ENTERED` provenance. Codes are normalized to uppercase. Invalid values return `400`; an existing code returns `409` without modifying the original record. Updates and deletes remain operator-only SQL operations. Visitor submissions are unverified reference values.
+
+This small demo permits ten successful additions per minute per process, returning `429` when busy, and stops accepting entries at 500 stored codes. This is a bounded single-process demo limit, not distributed abuse protection. Expired rows remain in the catalog; no scheduled cleanup or automatic renewal is configured.
 
 ## Store the rate in the right direction
 
@@ -27,7 +44,7 @@ Custom codes use 4–16 uppercase letters, digits or underscores, starting with 
 
 ## Add or update the fictional example locally
 
-Start the API and PostgreSQL using the local setup guide. Flyway applies V2 after V1; existing provider-cache data is preserved. The custom table initially contains no rows. The example is an optional operator action, not an automatic production seed.
+Start the API and PostgreSQL using the local setup guide. Flyway applies V1, V2 and V3; existing provider-cache data is preserved. The custom table initially contains no rows. V3 labels public submissions separately from existing operator data. The example is an optional operator action, not an automatic production seed.
 
 Open an authenticated SQL session:
 
