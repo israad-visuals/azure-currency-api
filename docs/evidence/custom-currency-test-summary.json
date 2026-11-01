@@ -1,0 +1,37 @@
+{
+  "checked_at": "2026-11-01T18:03:40.543910+00:00",
+  "command": "./mvnw verify",
+  "java": "21.0.10; compiler target Java17",
+  "tests": [
+    {
+      "name": "com.currency.exchange.CurrencyExchangeApiTests",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.currency.exchange.service.CustomCurrencyConversionTests",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.currency.exchange.service.ExchangeRateServiceTests",
+      "tests": "20",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "name": "com.currency.exchange.service.RatesProviderClientTests",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "passed": 63,
+  "scope": "Synthetic-provider unit tests and HTTP/H2 integration tests; PostgreSQL/live-provider runtime results recorded separately."
+}

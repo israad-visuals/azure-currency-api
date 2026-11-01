@@ -1,0 +1,21 @@
+{
+  "environment": "Isolated local PostgreSQL16.15 and locally built Java application; not Azure",
+  "checked_at": "2026-11-01T18:01:19.093411+00:00",
+  "provider": "Frankfurter v2 live feed",
+  "market_rate_fetched_at": "2026-11-01T18:01:18.678839Z",
+  "passed": 10,
+  "checks": [
+    "real PostgreSQL migrations V1 and V2 applied",
+    "1000 fictional credits at 500 per USD gives USD2",
+    "live provider rates and configured rate both available",
+    "custom to live EUR matches USD bridge",
+    "operator SQL update visible immediately",
+    "USD to configured currency reverses correctly",
+    "expired operator rate rejected with 503",
+    "custom catalog reports expired rate inactive",
+    "PostgreSQL enforces positive rates, precision and separate namespace",
+    "database readiness remains UP"
+  ],
+  "test_data": "Fictional GAME_CREDITS only",
+  "cleanup": "API process and temporary database container removed after run"
+}

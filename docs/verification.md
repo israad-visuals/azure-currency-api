@@ -1,10 +1,29 @@
-# Local deployment and recovery checks
+# Local verification and recovery checks
 
 [Project overview](../README.md) · [Architecture](architecture.md) · [Local setup](local-development.md)
 
 I ran the API and PostgreSQL in a separate local Docker environment on October 30, 2026. The application image used Java 17 on Linux ARM64, with PostgreSQL 16.15. The runtime checks used the real rate feed and a new local database.
 
-## Results
+## Custom-currency feature — November 1, 2026
+
+The current source passed **63 automated tests** using synthetic provider responses and H2. These cover both existing market conversions and the new configured-currency flow, including reverse conversion, custom-to-custom conversion, operator updates, expiry, separate code namespaces and rejected public write requests.
+
+A separately built application was then run against a temporary PostgreSQL 16.15 database on the dedicated local Docker context, with fresh synthetic credentials and no persistent volume. The API bound only to localhost and used the live Frankfurter feed. **All 10 runtime checks passed:**
+
+- Flyway applied V1 and V2 on PostgreSQL, with the restricted application role.
+- 1,000 fictional credits at 500 per USD converted to US$2.
+- Custom-to-EUR conversion matched the live USD-to-EUR rate and labeled both sources.
+- An operator SQL update changed the next conversion without restarting the app.
+- USD-to-custom conversion worked in reverse.
+- Expired configured rates returned `503`; their catalog entry showed `active: false`.
+- PostgreSQL rejected nonpositive valuations, invalid decimal places and a custom row using `USD`.
+- Database readiness remained `UP`.
+
+The API process and temporary PostgreSQL container were removed afterward. These are local checks, not an Azure deployment or a published image.
+
+Evidence: [automated test summary](evidence/custom-currency-test-summary.json), [PostgreSQL/live-provider runtime results](evidence/custom-currency-runtime-results.json).
+
+## Original market-only results — October 30, 2026
 
 | Check | Observed result |
 | --- | --- |
