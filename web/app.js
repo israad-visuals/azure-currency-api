@@ -351,11 +351,11 @@ function vq() {
         }),
         v.jsx("div", {
           className: "hidden md:flex items-center gap-6 lg:gap-8",
-          children: ["Docs", "Endpoints", "Contribute"].map((i) =>
+          children: ["Add currency", "Docs", "Endpoints", "Contribute"].map((i) =>
             v.jsx(
               me.a,
               {
-                href: `#${i.toLowerCase()}`,
+                href: `#${i.toLowerCase().replaceAll(" ", "-")}`,
                 className:
                   "text-gray-400 hover:text-emerald-400 transition-colors text-sm font-medium",
                 whileHover: { y: -2 },
@@ -441,7 +441,7 @@ function Eq() {
               className: "text-emerald-400 font-semibold",
               children: "custom currencies through USD",
             }),
-            ". Set a USD valuation for game credits or community units in PostgreSQL, then convert them to supported market currencies with Frankfurter.",
+            ". Add a USD valuation for your game credits or community units, then convert them to supported market currencies with Frankfurter.",
           ],
         }),
         v.jsx(me.p, {
@@ -451,7 +451,7 @@ function Eq() {
           className:
             "text-sm sm:text-base text-gray-500 max-w-2xl mx-auto mb-8 sm:mb-10 px-4",
           children:
-            "Public read endpoints. Manual valuations have expiry dates; market rates use a one-hour cache.",
+            "Add a currency without an account. Visitor valuations last 30 days; market rates use a one-hour cache.",
         }),
         v.jsxs(me.div, {
           initial: { opacity: 0, y: 20 },
@@ -461,7 +461,7 @@ function Eq() {
             "flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-12 sm:mb-16 px-4",
           children: [
             v.jsxs(me.a, {
-              href: "#docs",
+              href: "#add-currency",
               className:
                 "w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-8 py-3 sm:py-4 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-base sm:text-lg shadow-lg shadow-emerald-500/25",
               whileHover: {
@@ -469,7 +469,7 @@ function Eq() {
                 boxShadow: "0 20px 40px rgba(52,211,153,0.3)",
               },
               whileTap: { scale: 0.97 },
-              children: [v.jsx(pP, { size: 20 }), "View Documentation"],
+              children: [v.jsx(pP, { size: 20 }), "Add your currency"],
             }),
             v.jsxs(me.a, {
               href: Sr,
@@ -511,7 +511,7 @@ function Eq() {
     }),
   });
 }
-function Sq() {
+function Sq({ selectedCurrency }) {
   const [e, t] = C.useState([]),
     [r, i] = C.useState(!0),
     [s, l] = C.useState(null);
@@ -523,7 +523,8 @@ function Sq() {
         const response = await fetch(`${fq}/api/rates?base=USD`, { signal: controller.signal });
         if (!response.ok) throw new Error("Rates temporarily unavailable");
         const data = await response.json();
-        const codes = [...Object.keys(data.rates).filter(code => code.length > 3).slice(0, 1), "EUR", "GBP"];
+        const customCode = selectedCurrency || Object.keys(data.rates).find(code => code.length > 3);
+        const codes = [customCode, "EUR", "GBP"];
         const cards = codes.filter(code => data.rates[code]).map(code => ({
           id: code, currencyCode: code, rate: data.rates[code].rate,
           source: data.rates[code].quote.source,
@@ -540,7 +541,7 @@ function Sq() {
     loadRates();
     const timer = setInterval(loadRates, 60000);
     return () => { disposed = true; clearInterval(timer); controller.abort(); };
-  }, []);
+  }, [selectedCurrency]);
   const c = {
     GAME_CREDITS: { flag: "💱", name: "Fictional game credits" },
     EUR: { flag: "🇪🇺", name: "Euro" },
@@ -670,7 +671,7 @@ function Sq() {
                           }),
                           v.jsx("p", {
                             className: "text-xs text-gray-500",
-                            children: `${d.source === "MANUAL" ? "Manual valuation" : "Frankfurter"} · ${d.rateDate || "USD reference"}${d.validUntil ? ` · Valid through ${d.validUntil}` : ""}`
+                            children: `${d.source === "USER_ENTERED" ? "User-entered valuation" : d.source === "MANUAL" ? "Manual valuation" : "Frankfurter"} · ${d.rateDate || "USD reference"}${d.validUntil ? ` · Valid through ${d.validUntil}` : ""}`
                           }),
                         ],
                       }),
@@ -689,9 +690,21 @@ function Tq() {
   {
     "method": "GET",
     "path": "/api/custom-currencies",
-    "desc": "Read configured custom valuations: units per USD, dates and active status. GAME_CREDITS is fictional demo data. Operators update PostgreSQL; there is no public write endpoint.",
+    "desc": "Read configured custom valuations: units per USD, dates and active status. GAME_CREDITS is fictional demo data. Visitors can create new codes through the form or POST endpoint. Existing codes are protected from public changes.",
     "example": "curl \"https://api.dhawr.com/api/custom-currencies\"",
     "response": "[\n  {\n    \"code\": \"GAME_CREDITS\",\n    \"name\": \"Fictional game credits\",\n    \"unitsPerUsd\": 500,\n    \"decimalPlaces\": 0,\n    \"rateDate\": \"2026-11-01\",\n    \"validUntil\": \"2026-12-01\",\n    \"updatedAt\": \"2026-11-01T00:00:00Z\",\n    \"active\": true\n  }\n]"
+  },
+  {
+    "method": "POST",
+    "path": "/api/custom-currencies",
+    "desc": "Add a new public currency without a login. The response identifies USER_ENTERED data and sets a 30-day expiry. Duplicate codes return 409, invalid input 400 and busy submission windows 429. Existing currencies cannot be changed through this endpoint.",
+    "params": [
+      "code (4\u201316 characters)",
+      "name (1\u2013100 characters)",
+      "unitsPerUsd (positive number)"
+    ],
+    "example": "curl --fail-with-body -X POST \"https://api.dhawr.com/api/custom-currencies\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\"code\":\"MY_CREDITS\",\"name\":\"My game credits\",\"unitsPerUsd\":500}' ",
+    "response": "{\n  \"code\": \"MY_CREDITS\",\n  \"name\": \"My game credits\",\n  \"unitsPerUsd\": 500,\n  \"decimalPlaces\": 2,\n  \"source\": \"USER_ENTERED\",\n  \"active\": true\n}"
   },
   {
     "method": "GET",
@@ -1185,6 +1198,7 @@ function xq() {
   });
 }
 function _q() {
+  const [selectedCurrency, setSelectedCurrency] = C.useState(null);
   return v.jsxs("div", {
     className: "min-h-screen text-white antialiased overflow-x-hidden",
     children: [
@@ -1197,7 +1211,8 @@ function _q() {
         children: [
           v.jsx(vq, {}),
           v.jsx(Eq, {}),
-          v.jsx(Sq, {}),
+          v.jsx(AddCurrency, { onCreated: setSelectedCurrency }),
+          v.jsx(Sq, { selectedCurrency }),
           v.jsx(Tq, {}),
           v.jsx(wq, {}),
           v.jsx(Rq, {}),
@@ -1209,13 +1224,87 @@ function _q() {
   });
 }
 
+function AddCurrency({ onCreated }) {
+  const [busy, setBusy] = C.useState(false);
+  const [saved, setSaved] = C.useState(null);
+  const [error, setError] = C.useState("");
+  const errorRef = C.useRef(null);
+  C.useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
+
+  async function submit(event) {
+    event.preventDefault();
+    if (busy) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    setBusy(true); setError(""); setSaved(null);
+    try {
+      const response = await fetch(`${fq}/api/custom-currencies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: data.get("code"),
+          name: data.get("name"),
+          unitsPerUsd: data.get("unitsPerUsd")
+        })
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setError(result.detail || `The API returned ${response.status}. Please try again later.`);
+        return;
+      }
+      setSaved(result);
+      form.reset();
+      onCreated(result.code);
+    } catch {
+      setError("Could not confirm the save. Check your connection before retrying; the currency may already have been added.");
+    } finally { setBusy(false); }
+  }
+
+  const fieldClass = "w-full bg-slate-800/50 border border-white/10 rounded-xl text-white px-4 py-3";
+  const labelStyle = { display: "block", marginBottom: "0.5rem" };
+  const inputStyle = { minHeight: "48px", fontSize: "1rem" };
+  return v.jsx("section", { id: "add-currency", className: "relative py-16 sm:py-24", children:
+    v.jsxs("div", { className: "max-w-3xl mx-auto px-4 sm:px-6", children: [
+      v.jsxs(Tr, { className: "text-center mb-10 sm:mb-12", children: [
+        v.jsx("h2", { className: "text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3", children: "Add your currency" }),
+        v.jsx("p", { className: "text-gray-400 text-sm sm:text-base", children: "Set how many units equal US$1. Your currency is saved to the shared catalog and can be used for conversion straight away." })
+      ] }),
+      v.jsxs(ki, { className: "p-5 sm:p-6", glow: true, children: [
+        v.jsxs("form", { action: `${fq}/api/custom-currencies`, method: "post", onSubmit: submit, children: [
+          v.jsx("p", { id: "currency-help", className: "text-sm text-gray-400 mb-4", children: "All fields are required. Use a new code with 4–16 letters, digits or underscores, starting with a letter. Existing codes cannot be overwritten." }),
+          v.jsxs("div", { style: { marginBottom: "1.5rem" }, children: [
+            v.jsx("label", { htmlFor: "currency-code", style: labelStyle, children: "Currency code" }),
+            v.jsx("input", { id: "currency-code", name: "code", type: "text", required: true, minLength: 4, maxLength: 16, pattern: "[A-Za-z][A-Za-z0-9_]{3,15}", placeholder: "MY_CREDITS", autoComplete: "off", autoCorrect: "off", autoCapitalize: "off", spellCheck: false, "aria-describedby": "currency-help", className: fieldClass, style: inputStyle })
+          ] }),
+          v.jsxs("div", { style: { marginBottom: "1.5rem" }, children: [
+            v.jsx("label", { htmlFor: "currency-name", style: labelStyle, children: "Currency name" }),
+            v.jsx("input", { id: "currency-name", name: "name", type: "text", required: true, maxLength: 100, placeholder: "My game credits", className: fieldClass, style: inputStyle })
+          ] }),
+          v.jsxs("div", { style: { marginBottom: "1.5rem" }, children: [
+            v.jsx("label", { htmlFor: "currency-units", style: labelStyle, children: "Units per US$1" }),
+            v.jsx("input", { id: "currency-units", name: "unitsPerUsd", type: "number", inputMode: "decimal", required: true, min: "0.00000001", max: "999999999999999", step: "any", placeholder: "500", "aria-describedby": "units-help", className: fieldClass, style: inputStyle }),
+            v.jsx("p", { id: "units-help", className: "text-xs text-gray-500", children: "Example: enter 500 if US$1 equals 500 of your units. Use up to 8 decimal places." })
+          ] }),
+          v.jsx("p", { className: "text-xs text-gray-500 mb-4", children: "Visitor submissions are public, labeled USER_ENTERED and valid for 30 days. They are unverified reference valuations. Results in your currency use 2 decimal places." }),
+          v.jsx("button", { type: "submit", disabled: busy, className: "w-full px-5 py-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-medium", style: { minHeight: "48px", opacity: busy ? 0.6 : 1 }, children: busy ? "Saving…" : "Save currency" })
+        ] }),
+        error && v.jsx("p", { role: "alert", ref: errorRef, tabIndex: -1, className: "text-yellow-400 text-sm", style: { marginTop: "1rem" }, children: error }),
+        saved && v.jsxs("div", { role: "status", "aria-live": "polite", style: { marginTop: "1rem" }, children: [
+          v.jsx("p", { className: "text-emerald-400", children: `Saved ${saved.code}: US$1 = ${saved.unitsPerUsd} units. Valid through ${saved.validUntil}.` }),
+          v.jsx("a", { href: `${fq}/api/convert?amount=1000&from=${encodeURIComponent(saved.code)}&to=USD`, className: "text-emerald-400", target: "_blank", rel: "noopener noreferrer", children: "Try converting 1,000 of your units to USD →" })
+        ] })
+      ] })
+    ] })
+  });
+}
+
 function OperatorPage() {
   return v.jsxs("div", { className: "min-h-screen text-white antialiased overflow-x-hidden", children: [
     v.jsx(bq, {}), v.jsx(hq, {}), v.jsx(vq, {}),
     v.jsx("main", { className: "relative z-10 max-w-3xl mx-auto px-4 sm:px-6 py-16 sm:py-24", children:
       v.jsxs(ki, { className: "p-5 sm:p-6", children: [
         v.jsx("h1", { className: "text-2xl sm:text-3xl font-bold text-white mb-3", children: "Manage custom currency valuations" }),
-        v.jsx("p", { className: "text-gray-400 text-sm sm:text-base", children: "Custom rates are managed directly in PostgreSQL. The public API supports reading and conversion; the previous browser login and update endpoint are retired." }),
+        v.jsx("p", { className: "text-gray-400 text-sm sm:text-base", children: "Custom rates are managed directly in PostgreSQL. Visitors can add new codes through the public form. Updating an existing valuation still requires database operator access; the previous browser editor is retired." }),
         v.jsx("a", { href: `${Sr}/blob/main/docs/custom-currencies.md`, className: "text-emerald-400", children: "Read the operator SQL guide" }),
         v.jsx("p", { className: "text-xs text-gray-500", children: "Set units per US dollar and validity dates. GAME_CREDITS uses a fictional valuation for demonstration." })
       ] })
