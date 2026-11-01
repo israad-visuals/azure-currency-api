@@ -4,6 +4,18 @@ A Java REST API that converts locally managed and application-specific currencie
 
 **Explore:** [Project context](#project-context) · [Implementation](#implementation) · [Cloud architecture](#cloud-architecture) · [Build and deployment](#build-and-deployment) · [Results](#local-verification) · [Documentation](#documentation)
 
+## Live demo
+
+[Public documentation](https://docs.dhawr.com/) · [Example conversion](https://api.dhawr.com/api/convert?amount=1000&from=GAME_CREDITS&to=USD) · [Readiness](https://api.dhawr.com/actuator/health/readiness)
+
+The current demo runs on the existing VPS behind aaPanel-managed Apache. This is separate from the Azure Terraform deployment, which remains untested in Azure. The API domain serves JSON; the documentation page lives on the docs domain.
+
+The demo configures **500 fictional GAME_CREDITS per USD**, valid through **December 1, 2026**. This is an illustrative operator valuation, not a market quote. It must be updated manually before expiry. Provider-supported market rates come from Frankfurter and use a one-hour cache.
+
+The existing page's layout, animations and stylesheet were preserved while updating its content and API calls. Its recovered rendering code and build instructions are in [web/](web/README.md). The former browser editor now links to the SQL operator guide because the new API has no public write endpoint.
+
+[Read the scoped VPS release and verification record](docs/vps-deployment.md)
+
 ## Project context
 
 Game credits, community units and other locally managed currencies may have a configured USD value without appearing in a market-rate feed. This project connects those manually maintained valuations to provider-supported currencies through one common reference: USD.
@@ -90,6 +102,8 @@ Responses include both rate sources, publication dates, the USD bridge amount an
 
 | Guide | What it covers |
 | --- | --- |
+| [Public documentation page](web/README.md) | Recovered page code, preserved design, build and static deployment. |
+| [VPS release](docs/vps-deployment.md) | Existing-site upgrade, schema isolation, checks and rollback. |
 | [Azure architecture](docs/architecture/README.md) | Service choices, subnet layout, access paths and delivery design. |
 | [Custom currency guide](docs/custom-currencies.md) | Fictional example, manual SQL updates, USD direction and response fields. |
 | [Application design](docs/architecture.md) | USD bridging, caching, credentials and failure handling. |
