@@ -34,7 +34,7 @@ Scaling the API to zero does not stop PostgreSQL or VNet infrastructure charges.
 
 [Open full-size delivery flow](02-build-deployment.png) · [SVG](02-build-deployment.svg)
 
-The delivery design verifies the application, builds a Linux AMD64 image, publishes it to GitHub Container Registry and deploys a pinned image digest to Container Apps. Terraform provisioning and application releases use separate workflow steps. GitHub OIDC supplies short-lived Azure access through an identity scoped to deployment.
+This is a delivery design, not an implemented CI/CD pipeline. It proposes verifying the application, building a Linux AMD64 image, publishing it to GitHub Container Registry and deploying a pinned image digest to Container Apps. The proposed Terraform and application workflows would use GitHub OIDC for short-lived Azure access. The current repository has Docker and Terraform files but no GitHub Actions workflow.
 
 The new revision is checked with startup/readiness probes and HTTP smoke requests. The previous working image and revision provide the rollback reference. A public application image avoids a paid registry baseline; database credentials stay outside the image.
 

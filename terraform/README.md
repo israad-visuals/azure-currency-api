@@ -131,6 +131,8 @@ terraform apply api.tfplan
 
 This updates the existing Container App. It removes `sleep`, uses the Java image's entrypoint, adds the Key Vault reference, sets `DB_URL`/`DB_USERNAME`/`DB_PASSWORD`, and enables HTTPS ingress and the three probes. The API gets the application password, not the administrator password. The setup stage must have completed first because a system-assigned identity does not exist before its app is created.
 
+**Custom-currency feature:** the default image predates this feature and only supports market currencies. Build and publish a new Linux AMD64 image from the current source, then set `container_image` to its digest before deploying this feature. Terraform does not publish it for you. See the [operator guide](../docs/custom-currencies.md) for configuring rates after migration V2.
+
 The default image is the exact public Linux AMD64 image behind `ghcr.io/israad-visuals/currency-api:portal-v1`, pinned by digest in `variables.tf`. Terraform does not build or upload it: Azure pulls that reference. To release different code later, build and push a new AMD64 image, set `container_image` in your local values file to its new tag or digest, and review another plan.
 
 | Probe | Path | Delay | Interval | Timeout | Failures |
