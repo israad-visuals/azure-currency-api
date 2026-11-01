@@ -1,21 +1,47 @@
-![Currency Exchange API: Azure hosting and container delivery, with 42 local automated tests, 14 HTTP checks, two architecture views and three API endpoints.](docs/assets/project-header.svg)
+![Custom Currency Bridge API: manually configured currencies, USD conversion and market reference rates.](docs/assets/project-header.svg)
 
-A Java REST API that converts between supported currencies and caches exchange rates in PostgreSQL. This project brings together the application, a repeatable container environment and an Azure Container Apps hosting design.
+A Java REST API that converts locally managed and application-specific currencies into supported market currencies through USD. Operators maintain a custom currency’s USD valuation in PostgreSQL; the API combines it with Frankfurter reference rates and shows where both rates came from.
 
-**Explore:** [Project context](#project-context) · [My contribution](#my-contribution) · [Cloud architecture](#cloud-architecture) · [Build and deployment](#build-and-deployment) · [Results](#local-verification) · [Documentation](#documentation)
+**Explore:** [Project context](#project-context) · [Implementation](#implementation) · [Cloud architecture](#cloud-architecture) · [Build and deployment](#build-and-deployment) · [Results](#local-verification) · [Documentation](#documentation)
 
 ## Project context
 
-Currency conversion needs consistent decimal calculations, dated rates and clear handling of provider failures. I built the API around a shared rate snapshot, then packaged it with PostgreSQL so database setup and recovery could be checked in a repeatable environment.
+Game credits, community units and other locally managed currencies may have a configured USD value without appearing in a market-rate feed. This project connects those manually maintained valuations to provider-supported currencies through one common reference: USD.
+
+For example, suppose an operator sets **US$1 = 500 fictional game credits**, and an illustrative market rate is **US$1 = €0.90**:
+
+```text
+1,000 GAME_CREDITS ÷ 500 credits per USD = US$2
+US$2 × 0.90 EUR per USD                 = €1.80
+```
+
+Both example rates are illustrative. The API supports custom-to-market, market-to-custom, custom-to-custom and ordinary market pairs. A currency must be configured locally or available from the provider; the service does not invent missing prices.
+
+Custom rates include a publication date, validity end date and update timestamp. Responses identify `MANUAL`, `FRANKFURTER` or `USD_REFERENCE` sources and expose the intermediate USD amount. A manually entered valuation is not presented as an independently verified market price. These are reference conversions, not money transfers.
 
 For Azure hosting, I chose Container Apps Consumption to reuse the Docker image and scale API compute to zero between visits. The current Terraform demo uses a PostgreSQL public endpoint restricted by outbound IP firewall rules, TLS and scoped access to its database secret. This keeps the ongoing cost lower than the private-network portal lab.
 
-## My contribution
+## Implementation
 
-- **Application:** I added cross-currency conversion, currency-specific rounding, input validation and a one-hour rate cache.
-- **Containers and data:** I packaged the API and PostgreSQL with Docker Compose, a versioned database migration and separate application credentials.
+- **Application:** USD-bridge conversion, dated custom valuations, currency-specific rounding, input validation and a one-hour provider cache.
+- **Containers and data:** Docker Compose, versioned PostgreSQL migrations, separate application credentials and operator SQL updates for custom rates.
 - **Azure architecture:** I designed the ingress, subnet layout, private database connection, managed identity, secret access and monitoring.
 - **Operations:** I verified the local application, investigated a live-provider parsing issue and checked cache persistence and database-outage recovery.
+
+## Conversion flow
+
+```mermaid
+flowchart LR
+    Client[Client request] --> API[Java conversion API]
+    API --> Manual[PostgreSQL custom valuations]
+    API --> Cache[PostgreSQL market-rate cache]
+    API -->|Refresh when needed| Provider[Frankfurter HTTPS API]
+    Provider --> Cache
+    API --> Bridge[Source units to USD to target units]
+    Bridge --> Result[Amount and rate provenance]
+```
+
+[Configure a fictional currency and try the API](docs/custom-currencies.md)
 
 ## Cloud architecture
 
@@ -29,7 +55,7 @@ The diagram above records the private-network portal lab. The [current Terraform
 
 [![Currency API delivery design: verify the application, build an AMD64 image, publish to GitHub Container Registry and deploy a pinned revision with OIDC and health checks.](docs/architecture/02-build-deployment.png)](https://viewer.diagrams.net/?nav=1&title=Currency%20API%20Delivery&page-id=currency-api-delivery#Uhttps%3A%2F%2Fraw.githubusercontent.com%2Fisraad-visuals%2Fazure-currency-api%2Fmain%2Fdocs%2Farchitecture%2FCurrency-API-Azure-Architecture.drawio)
 
-I designed the delivery flow around a verified Docker image and an exact image digest. GitHub Actions builds the Linux AMD64 image and publishes it to GitHub Container Registry. The deployment design uses short-lived Azure access through OIDC, separate Terraform steps, revision health checks and a previous working revision for recovery.
+The delivery diagram shows the planned GitHub Actions and OIDC workflow: verify the application, build a Linux AMD64 image, publish it to GitHub Container Registry and deploy a pinned digest with health checks. The repository currently provides the application, Docker build and locally validated Terraform; the automated GitHub Actions/OIDC pipeline is not implemented.
 
 [Open full-size delivery flow](docs/architecture/02-build-deployment.png) · [Release design](docs/architecture/README.md#build-and-deployment)
 
@@ -37,8 +63,9 @@ I designed the delivery flow around a verified Docker image and an exact image d
 
 | Check | Recorded result |
 | --- | --- |
-| Automated verification | **42 tests passed**, with zero failures, errors or skipped tests. |
-| Running API and PostgreSQL | **14 HTTP smoke checks passed**, repeated after database recovery. |
+| Current automated verification | **63 tests passed**, including manual valuations, USD bridging, expiry, database updates and schema constraints. |
+| Current custom-currency runtime checks | **10 checks passed** against isolated PostgreSQL 16.15 and the live provider on November 1. |
+| Original market-only runtime checks | **14 HTTP smoke checks passed** on October 30, repeated after database recovery. |
 | API restart | The cached rates and fetch timestamp were preserved. |
 | Database outage | Liveness stayed `200`; readiness changed to `503` and recovered to `200` after restart. |
 
@@ -48,22 +75,28 @@ The live provider returned a valid USD reference row that the parser rejected. I
 
 ## API
 
+For a configured currency: `GET /api/convert?from=GAME_CREDITS&to=EUR&amount=1000`. Install the optional fictional example after the application applies migration V2; the table starts empty.
+
 | Endpoint | Purpose |
 | --- | --- |
 | `GET /api/convert?from=CAD&to=EUR&amount=100` | Convert an amount between supported currencies. |
 | `GET /api/rates?base=CAD` | Return the cached rate table for a chosen base. |
-| `GET /api/currencies` | List the currency codes in the provider feed. |
+| `GET /api/currencies` | List provider-supported codes and currently valid configured codes. |
+| `GET /api/custom-currencies` | Show configured valuations, timestamps, expiry and active status. |
 
-Responses include rate publication dates and the snapshot fetch time. Calculations use `BigDecimal` and round to the target currency's decimal places. The API calculates reference amounts; it does not transfer money.
+Responses include both rate sources, publication dates, the USD bridge amount and the provider snapshot fetch time when used. Calculations use `BigDecimal` and round the final result to the target currency's configured decimal places. Custom rates are maintained through an authenticated database session; there is no public write endpoint.
 
 ## Documentation
 
 | Guide | What it covers |
 | --- | --- |
 | [Azure architecture](docs/architecture/README.md) | Service choices, subnet layout, access paths and delivery design. |
-| [Application design](docs/architecture.md) | Calculations, caching, credentials and failure handling. |
+| [Custom currency guide](docs/custom-currencies.md) | Fictional example, manual SQL updates, USD direction and response fields. |
+| [Application design](docs/architecture.md) | USD bridging, caching, credentials and failure handling. |
 | [Verification and troubleshooting](docs/verification.md) | Observed results, recovery checks and the provider integration fix. |
 | [Local setup and operations](docs/local-development.md) | Container startup, health checks, logs and cleanup. |
 | [Terraform deployment](terraform/README.md) | Lower-cost Azure demo, database firewall/login setup, API deployment and cleanup. |
 
 The Terraform configuration has been validated locally and includes exact-IP database firewall rules, scale-to-zero and permanent lab-cleanup settings. Deployment to Azure with Terraform remains to be tested; follow the setup and API stages in its guide.
+
+The Terraform image default still points to the earlier market-only build. Build and publish a new image from this source, then set its digest in `container_image` before deploying the custom-currency feature. The new feature has not been deployed to Azure.

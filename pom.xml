@@ -11,8 +11,8 @@
     <groupId>com.currency</groupId>
     <artifactId>currency-exchange-api</artifactId>
     <version>0.1.0-SNAPSHOT</version>
-    <name>Currency Exchange API</name>
-    <description>Currency conversion with cached exchange rates</description>
+    <name>Custom Currency Bridge API</name>
+    <description>Convert configured currencies through USD using market reference rates</description>
     <properties>
         <java.version>17</java.version>
     </properties>
