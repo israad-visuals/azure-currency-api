@@ -1,0 +1,68 @@
+{
+  "checked_at_utc": "2026-11-01T18:41:34.350936+00:00",
+  "command": "./mvnw verify",
+  "java": "21.0.10; compiler target Java17",
+  "source_commit": "10a55595728724f89bdaf31210aa9e2093410735",
+  "tests": [
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.currency.exchange.CurrencyExchangeApiTests",
+      "time": "4.208",
+      "tests": "20",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.currency.exchange.service.RatesProviderClientTests",
+      "time": "0.388",
+      "tests": "15",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.currency.exchange.service.ExchangeRateServiceTests",
+      "time": "0.184",
+      "tests": "20",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.currency.exchange.service.CustomCurrencySubmissionTests",
+      "time": "0.998",
+      "tests": "2",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    },
+    {
+      "{http://www.w3.org/2001/XMLSchema-instance}noNamespaceSchemaLocation": "https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd",
+      "version": "3.0.2",
+      "name": "com.currency.exchange.service.CustomCurrencyConversionTests",
+      "time": "0.05",
+      "tests": "14",
+      "errors": "0",
+      "skipped": "0",
+      "failures": "0",
+      "flakes": "0"
+    }
+  ],
+  "passed": 71,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "scope": "Synthetic-provider unit tests and HTTP/H2 integration tests; separate PostgreSQL18 and live browser checks recorded in runtime evidence."
+}

@@ -76,7 +76,8 @@ The delivery diagram shows the planned GitHub Actions and OIDC workflow: verify 
 | Check | Recorded result |
 | --- | --- |
 | Current automated verification | **71 tests passed**, including manual valuations, USD bridging, expiry, database updates and schema constraints. |
-| Current custom-currency runtime checks | **10 checks passed** against isolated PostgreSQL 16.15 and the live provider on November 1. |
+| Initial custom-currency runtime checks | **10 checks passed** against isolated PostgreSQL 16.15 and the live provider on November 1. |
+| Public-submission runtime checks | **8 isolated PostgreSQL18 checks and 9 public HTTPS checks passed**, including a live browser save, duplicate protection and conversion. |
 | Original market-only runtime checks | **14 HTTP smoke checks passed** on October 30, repeated after database recovery. |
 | API restart | The cached rates and fetch timestamp were preserved. |
 | Database outage | Liveness stayed `200`; readiness changed to `503` and recovered to `200` after restart. |

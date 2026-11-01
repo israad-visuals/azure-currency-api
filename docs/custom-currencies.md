@@ -95,13 +95,13 @@ Conversion responses include `bridgeCurrency`, `usdAmount`, `fromQuote` and `toQ
 
 Custom-to-USD and custom-to-custom conversions work without a market snapshot, with `fetchedAt: null`. A conversion involving another market currency requires a valid provider snapshot: it reuses the one-hour cache or refreshes it over HTTPS. A failed refresh returns `503`; an unknown code returns `400`.
 
-The public API is read-only. There is no unauthenticated endpoint to create, change or delete valuations.
+Public reads and create-only submissions are available without a login. No public endpoint changes or deletes an existing valuation.
 
 ## Use it on Azure
 
-The currently pinned `portal-v1` image predates custom currencies. Build a new Linux AMD64 image from this source, publish it to the image registry and use its digest in `container_image` before expecting this feature on Azure. The Terraform guide's setup/login/API sequence still applies; the new application runs V2 automatically.
+The currently pinned `portal-v1` image predates custom currencies. Build a new Linux AMD64 image from this source, publish it to the image registry and use its digest in `container_image` before expecting this feature on Azure. The Terraform guide's setup/login/API sequence still applies; the new application runs all pending migrations, including V3, automatically.
 
-To edit valuations using the existing temporary PostgreSQL client, first let the new API apply V2. Then temporarily switch `deployment_stage` to `setup` and apply a reviewed plan. In the setup client's portal console, use the printed database connection command with `user=currency_app` and enter the application password. Run the operator SQL, then switch back to `api` and apply a reviewed plan. The database rows persist; the demo is unavailable during that maintenance step. Check the app's outbound IP allowlist when revisions change.
+To edit valuations using the existing temporary PostgreSQL client, first let the new API apply its pending migrations. Then temporarily switch `deployment_stage` to `setup` and apply a reviewed plan. In the setup client's portal console, use the printed database connection command with `user=currency_app` and enter the application password. Run the operator SQL, then switch back to `api` and apply a reviewed plan. The database rows persist; the demo is unavailable during that maintenance step. Check the app's outbound IP allowlist when revisions change.
 
 No new Azure service is needed for this feature; it uses the existing database and API. Additional activity can still consume compute, database, log and network allowances.
 

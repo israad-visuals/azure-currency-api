@@ -1,6 +1,20 @@
-# Existing VPS demo release — November 1, 2026
+# VPS demo releases — November 1, 2026
 
-The custom-currency API and public documentation were deployed to the existing Dhawr sites. This was an upgrade of the VPS deployment, not an Azure deployment.
+The custom-currency API and public documentation run on the existing Dhawr VPS sites. This is separate from the undeployed Azure Terraform configuration.
+
+## Follow-up: public currency creation
+
+The public form and create-only JSON endpoint were deployed from `10a55595728724f89bdaf31210aa9e2093410735`. The JAR SHA-256 is `f3517e62ca831c84484ef9a74cd9fb6f14626bf7174e99b5da3fe0fbce9ce27a`. Its JavaScript asset is `app-5f49d91f8181.js`; the original CSS remains unchanged.
+
+Visitors enter a new code, name and units per USD. The API inserts a new row, assigns USER_ENTERED provenance, two decimal places and a 30-day expiry. Existing codes cannot be overwritten. Ten successful additions per minute per process and a 500-code catalog cap bound this demo. There is no public edit or delete endpoint.
+
+V3 adds a public-submission flag while keeping existing operator rows marked MANUAL. Before deployment, the database backup was restored into a temporary database; a real browser save and eight runtime checks passed. After deployment, a live browser save, direct database read and nine public HTTPS checks passed. The temporary test currency and rehearsal database were removed. All 71 automated tests passed.
+
+Only the Dhawr JAR link, documentation index and new hashed static asset changed during this follow-up. The existing service launch and Apache/site configuration were preserved. The previous JAR, index, service settings and PostgreSQL 18 backup remain available privately for rollback. Additive V3 is compatible with the previous code; no database down migration is part of a rollback.
+
+## Initial upgrade: custom-currency API and recovered page
+
+The following records the earlier release before public submissions were added.
 
 - Documentation: https://docs.dhawr.com/
 - API: https://api.dhawr.com/api/custom-currencies

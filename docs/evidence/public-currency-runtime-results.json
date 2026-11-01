@@ -1,0 +1,20 @@
+{
+  "source_commit": "10a55595728724f89bdaf31210aa9e2093410735",
+  "checked_at_utc": "2026-11-01T18:40:24.446095+00:00",
+  "passed": 9,
+  "checks": [
+    "public readiness UP",
+    "live browser submission visible in persisted catalog with expiry and provenance",
+    "live browser-created rate converts 1000 units into USD4",
+    "visitor currency bridges to live provider rate",
+    "duplicate POST rejected",
+    "duplicate left the existing database value unchanged",
+    "operator valuation remains distinct",
+    "public page serves exact form release",
+    "existing stylesheet unchanged"
+  ],
+  "cleanup": "The single synthetic live check row was deleted with exact code, name, valuation and provenance guards; absence was verified. The isolated rehearsal database was removed.",
+  "database_write_independently_verified": true,
+  "isolated_postgresql_checks_passed": 8,
+  "deployment_environment": "Existing VPS, aaPanel Apache, Java17 and PostgreSQL18; not Azure"
+}

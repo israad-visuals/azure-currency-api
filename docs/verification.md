@@ -4,9 +4,19 @@
 
 I ran the API and PostgreSQL in a separate local Docker environment on October 30, 2026. The application image used Java 17 on Linux ARM64, with PostgreSQL 16.15. The runtime checks used the real rate feed and a new local database.
 
+## Public currency submissions — November 1, 2026
+
+The updated source passed **71 automated tests**, including JSON submission validation, database persistence, duplicate and concurrent-code protection, visitor provenance, server-owned expiry, submission limits and create-only CORS. Existing conversion and failure tests remain included.
+
+The PostgreSQL 18 backup from the existing aaPanel-hosted VPS was restored into an isolated verification database. Migrations V1–V3 validated, and an actual browser submission created a USER_ENTERED valuation. Eight runtime checks passed there. The temporary database was removed before cutover.
+
+After deployment, a browser saved a temporary currency through https://docs.dhawr.com/. Nine public HTTPS checks verified its catalog record, USD and live-provider conversion, duplicate rejection without overwriting, source labels, current frontend bytes, unchanged CSS and readiness. A direct database read verified the submitted row. Only that synthetic check row was then deleted; the original operator valuation and legacy row were preserved.
+
+Evidence: [71-test summary](evidence/public-currency-test-summary.json), [public verification](evidence/public-currency-runtime-results.json), [scoped VPS release](vps-deployment.md).
+
 ## Custom-currency feature — November 1, 2026
 
-The current source passed **63 automated tests** using synthetic provider responses and H2. These cover both existing market conversions and the new configured-currency flow, including reverse conversion, custom-to-custom conversion, operator updates, expiry, separate code namespaces and rejected public write requests.
+The initial custom-currency source passed **63 automated tests** using synthetic provider responses and H2. These cover both existing market conversions and the new configured-currency flow, including reverse conversion, custom-to-custom conversion, operator updates, expiry, separate code namespaces and rejected public write requests.
 
 A separately built application was then run against a temporary PostgreSQL 16.15 database on the dedicated local Docker context, with fresh synthetic credentials and no persistent volume. The API bound only to localhost and used the live Frankfurter feed. **All 10 runtime checks passed:**
 
