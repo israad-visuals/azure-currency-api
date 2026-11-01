@@ -1,5 +1,7 @@
 ![Custom Currency Bridge API: manually configured currencies, USD conversion and market reference rates.](docs/assets/project-header.svg)
 
+**Live app:** [docs.dhawr.com](https://docs.dhawr.com/)
+
 A Java REST API that converts locally managed and application-specific currencies into supported market currencies through USD. Visitors can add new custom valuations through the public form, and operators maintain existing rates in PostgreSQL; the API combines it with Frankfurter reference rates and shows where both rates came from.
 
 **Explore:** [Project context](#project-context) · [Implementation](#implementation) · [Cloud architecture](#cloud-architecture) · [Build and deployment](#build-and-deployment) · [Results](#local-verification) · [Documentation](#documentation)
