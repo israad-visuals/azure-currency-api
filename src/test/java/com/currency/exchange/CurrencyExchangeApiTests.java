@@ -125,6 +125,17 @@ class CurrencyExchangeApiTests {
                 .andExpect(status().isForbidden());
     }
     @Test
+    void allowsCrossOriginJsonSubmissionsOnlyAtTheCreateEndpoint() throws Exception {
+        mvc.perform(options("/api/custom-currencies").header("Origin", "https://docs.dhawr.com")
+                        .header("Access-Control-Request-Method", "POST")
+                        .header("Access-Control-Request-Headers", "content-type"))
+                .andExpect(status().isOk()).andExpect(header().string("Access-Control-Allow-Origin", "*"));
+        mvc.perform(options("/api/custom-currencies").header("Origin", "https://docs.dhawr.com")
+                        .header("Access-Control-Request-Method", "PUT"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void exposesOnlyStatusForLivenessAndDatabaseReadiness() throws Exception {
         mvc.perform(get("/actuator/health/liveness"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("UP"))
@@ -194,8 +205,84 @@ class CurrencyExchangeApiTests {
     }
 
     @Test
-    void rejectsPublicCustomCurrencyWrites() throws Exception {
-        mvc.perform(post("/api/custom-currencies")).andExpect(status().isMethodNotAllowed());
+    void savesVisitorValuationsAndUsesThemForConversion() throws Exception {
+        mvc.perform(post("/api/custom-currencies").contentType("application/json")
+                        .content("{\"code\":\" my_points \",\"name\":\"My points\",\"unitsPerUsd\":\"500.25\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.code").value("MY_POINTS"))
+                .andExpect(jsonPath("$.source").value("USER_ENTERED"))
+                .andExpect(jsonPath("$.validUntil").value("2026-12-01"));
+        assertEquals(new BigDecimal("500.250000000000000000"), customs.findById("MY_POINTS").orElseThrow().getUnitsPerUsd());
+        mvc.perform(get("/api/convert").param("from", "MY_POINTS").param("to", "USD").param("amount", "1000.5"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.convertedAmount").value(2.0))
+                .andExpect(jsonPath("$.fromQuote.source").value("USER_ENTERED"));
+        mvc.perform(get("/api/custom-currencies"))
+                .andExpect(jsonPath("$[0].source").value("USER_ENTERED"));
+    }
+
+    @Test
+    void visitorsCannotAssignTrustedProvenanceOrTheirOwnExpiry() throws Exception {
+        mvc.perform(post("/api/custom-currencies").contentType("application/json")
+                        .content("{\"code\":\"USER_POINTS\",\"name\":\"Visitor points\",\"unitsPerUsd\":100,"
+                                + "\"publicSubmission\":false,\"source\":\"MANUAL\",\"validUntil\":\"2099-01-01\"}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.source").value("USER_ENTERED"))
+                .andExpect(jsonPath("$.validUntil").value("2026-12-01"));
+        assertEquals(true, customs.findById("USER_POINTS").orElseThrow().isPublicSubmission());
+    }
+
+    @Test
+    void neverOverwritesAnExistingValuation() throws Exception {
+        customs.saveAndFlush(new CustomCurrency("MY_POINTS", "Original", new BigDecimal("500"), (short) 2,
+                LocalDate.now(clock), LocalDate.now(clock).plusDays(30), clock.instant()));
+        mvc.perform(post("/api/custom-currencies").contentType("application/json")
+                        .content("{\"code\":\"MY_POINTS\",\"name\":\"Replacement\",\"unitsPerUsd\":999}"))
+                .andExpect(status().isConflict());
+        assertEquals("Original", customs.findById("MY_POINTS").orElseThrow().getName());
+        assertEquals(0, new BigDecimal("500").compareTo(customs.findById("MY_POINTS").orElseThrow().getUnitsPerUsd()));
+    }
+
+    @Test
+    void rejectsInvalidVisitorInputsBeforeWriting() throws Exception {
+        for (String body : new String[] {
+                "{\"code\":\"USD\",\"name\":\"Reserved\",\"unitsPerUsd\":10}",
+                "{\"code\":\"BAD CODE\",\"name\":\"Invalid\",\"unitsPerUsd\":10}",
+                "{\"code\":\"MY_POINTS\",\"name\":\"\",\"unitsPerUsd\":10}",
+                "{\"code\":\"MY_POINTS\",\"name\":\"Points\",\"unitsPerUsd\":0}",
+                "{\"code\":\"MY_POINTS\",\"name\":\"Points\",\"unitsPerUsd\":-1}",
+                "{\"code\":\"MY_POINTS\",\"name\":\"Points\",\"unitsPerUsd\":0.000000001}",
+                "{\"code\":\"MY_POINTS\",\"name\":\"Points\",\"unitsPerUsd\":1000000000000000}",
+                "{\"code\":\"MY_POINTS\",\"name\":\"Points\"}" }) {
+            mvc.perform(post("/api/custom-currencies").contentType("application/json").content(body))
+                    .andExpect(status().isBadRequest());
+        }
+        assertEquals(0, customs.count());
+    }
+
+    @Test
+    void concurrentDuplicateSubmissionsProduceOneCurrency() throws Exception {
+        var start = new java.util.concurrent.CountDownLatch(1);
+        var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        try {
+            java.util.concurrent.Callable<Integer> submit = () -> {
+                start.await();
+                return mvc.perform(post("/api/custom-currencies").contentType("application/json")
+                                .content("{\"code\":\"RACE_POINTS\",\"name\":\"Race points\",\"unitsPerUsd\":500}"))
+                        .andReturn().getResponse().getStatus();
+            };
+            var first = pool.submit(submit);
+            var second = pool.submit(submit);
+            start.countDown();
+            var statuses = new java.util.ArrayList<>(java.util.List.of(first.get(), second.get()));
+            java.util.Collections.sort(statuses);
+            assertEquals(java.util.List.of(201, 409), statuses);
+            assertEquals(1, customs.count());
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void rejectsPublicCustomCurrencyChangesAndDeletes() throws Exception {
+        mvc.perform(post("/api/custom-currencies")).andExpect(status().isBadRequest());
         mvc.perform(put("/api/custom-currencies/GAME_CREDITS")).andExpect(status().isNotFound());
         mvc.perform(delete("/api/custom-currencies/GAME_CREDITS")).andExpect(status().isNotFound());
     }

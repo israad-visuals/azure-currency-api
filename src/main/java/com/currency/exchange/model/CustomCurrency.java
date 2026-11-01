@@ -33,6 +33,9 @@ public class CustomCurrency {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    @Column(nullable = false)
+    private boolean publicSubmission;
+
     public CustomCurrency() {
     }
 
@@ -46,6 +49,14 @@ public class CustomCurrency {
         this.validUntil = validUntil;
         this.updatedAt = updatedAt;
     }
+
+    public CustomCurrency(String code, String name, BigDecimal unitsPerUsd, short decimalPlaces,
+            LocalDate rateDate, LocalDate validUntil, Instant updatedAt, boolean publicSubmission) {
+        this(code, name, unitsPerUsd, decimalPlaces, rateDate, validUntil, updatedAt);
+        this.publicSubmission = publicSubmission;
+    }
+
+    public boolean isPublicSubmission() { return publicSubmission; }
 
     public String getCode() { return code; }
     public String getName() { return name; }

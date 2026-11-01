@@ -104,7 +104,7 @@ public class ExchangeRateService {
         return customCurrencies.findAll().stream().sorted(Comparator.comparing(CustomCurrency::getCode))
                 .map(value -> new CustomCurrencyResponse(value.getCode(), value.getName(), value.getUnitsPerUsd(),
                         value.getDecimalPlaces(), value.getRateDate(), value.getValidUntil(),
-                        value.getUpdatedAt(), isActive(value))).toList();
+                        value.getUpdatedAt(), isActive(value), value.isPublicSubmission() ? "USER_ENTERED" : "MANUAL")).toList();
     }
 
     private CustomCurrency findCustom(String code) {
@@ -139,7 +139,7 @@ public class ExchangeRateService {
     }
 
     private RateDetails manualQuote(CustomCurrency currency) {
-        return new RateDetails("MANUAL", currency.getUnitsPerUsd(), currency.getRateDate(),
+        return new RateDetails(currency.isPublicSubmission() ? "USER_ENTERED" : "MANUAL", currency.getUnitsPerUsd(), currency.getRateDate(),
                 currency.getUpdatedAt(), currency.getValidUntil());
     }
 

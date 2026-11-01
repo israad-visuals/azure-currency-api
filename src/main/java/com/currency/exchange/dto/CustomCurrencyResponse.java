@@ -6,5 +6,5 @@ import java.time.LocalDate;
 
 public record CustomCurrencyResponse(String code, String name, BigDecimal unitsPerUsd,
                                      int decimalPlaces, LocalDate rateDate,
-                                     LocalDate validUntil, Instant updatedAt, boolean active) {
+                                     LocalDate validUntil, Instant updatedAt, boolean active, String source) {
 }

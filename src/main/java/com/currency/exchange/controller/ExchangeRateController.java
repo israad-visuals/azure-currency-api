@@ -1,6 +1,16 @@
 package com.currency.exchange.controller;
 
 import com.currency.exchange.dto.ConversionResponse;
+import com.currency.exchange.dto.CreateCustomCurrencyRequest;
+import com.currency.exchange.service.CustomCurrencySubmissionService;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataIntegrityViolationException;
+import jakarta.persistence.EntityExistsException;
+import org.hibernate.exception.ConstraintViolationException;
+import com.currency.exchange.exception.ApiException;
 import com.currency.exchange.dto.CustomCurrencyResponse;
 import com.currency.exchange.dto.RatesResponse;
 import com.currency.exchange.service.ExchangeRateService;
@@ -16,8 +26,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ExchangeRateController {
     private final ExchangeRateService service;
 
-    public ExchangeRateController(ExchangeRateService service) {
+    private final CustomCurrencySubmissionService submissions;
+
+    public ExchangeRateController(ExchangeRateService service, CustomCurrencySubmissionService submissions) {
         this.service = service;
+        this.submissions = submissions;
     }
 
     @GetMapping("/convert")
@@ -34,6 +47,16 @@ public class ExchangeRateController {
     @GetMapping("/currencies")
     public List<String> currencies() {
         return service.getCurrencies();
+    }
+
+    @PostMapping("/custom-currencies")
+    public ResponseEntity<CustomCurrencyResponse> createCurrency(@RequestBody CreateCustomCurrencyRequest request) {
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(submissions.create(request));
+        } catch (DataIntegrityViolationException | EntityExistsException | ConstraintViolationException error) {
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "That currency code could not be added. It may already exist; choose a different code.");
+        }
     }
 
     @GetMapping("/custom-currencies")
