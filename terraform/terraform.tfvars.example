@@ -1,0 +1,12 @@
+subscription_id = ""
+tenant_id       = ""
+location        = "northcentralus"
+name_suffix     = "ismail01"
+
+deployment_stage = "setup"
+min_replicas     = 0
+
+database_allowed_ips = []
+
+database_admin_password = ""
+database_app_password   = ""
