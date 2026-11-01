@@ -18,12 +18,16 @@ If Compose is installed as the standalone command, use `docker-compose` in place
 
 The API listens at `http://127.0.0.1:8088`. Set `API_PORT` before the Compose and smoke commands if that port is occupied. PostgreSQL stays on the internal container network.
 
-The first build runs the automated tests. PostgreSQL initializes the application role, then Flyway applies the cache migration when the API starts. The first currency request fetches the rate table over the internet.
+The first build runs the automated tests. PostgreSQL initializes the application role, then Flyway applies the provider-cache and custom-currency migrations when the API starts. The first currency request fetches the rate table over the internet.
 
 ```sh
 curl 'http://127.0.0.1:8088/api/convert?from=CAD&to=EUR&amount=100'
 curl http://127.0.0.1:8088/actuator/health/readiness
 ```
+
+## Configure a fictional custom currency
+
+After the API has started and applied both migrations, follow the [custom currency guide](custom-currencies.md). Custom rates are optional: a fresh database has none, and ordinary market conversions still work.
 
 ## Credentials and storage
 
@@ -85,7 +89,7 @@ Use Java 17 or later and a separate PostgreSQL database named `currency_exchange
 | `DB_POOL_SIZE` | Maximum database connections; defaults to `5`. |
 | `PORT` | Application port; defaults to `8080`. |
 
-The application role needs permission to create tables in its own schema so Flyway can apply migrations. Use a new database for this version; the migration does not import the previous manually entered rate table. Spring Boot does not automatically load `.env` files.
+The application role needs permission to create tables in its own schema so Flyway can apply migrations. V2 adds custom currencies to an existing V1 database without replacing the provider cache. Keep applied migration files unchanged; use the operator SQL guide to maintain valuations. Spring Boot does not automatically load `.env` files.
 
 ```sh
 ./mvnw verify
